@@ -29,7 +29,7 @@ export function Header() {
 
   const getNavigation = () => {
     if (user) {
-      if (user.role === 'Seller') {
+      if (user.role === 'seller') {
         return [
           { name: 'Dashboard', href: '/dashboard/seller', icon: TrendingUp },
           { name: 'My Products', href: '/dashboard/seller?tab=products', icon: Package },
@@ -116,7 +116,7 @@ export function Header() {
             )}
 
             {/* Cart - only show for buyers */}
-            {user && user.role === 'Buyer' && (
+            {user && user.role === 'buyer' && (
               <button 
                 onClick={openCart}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg relative transition-all duration-200 group"
@@ -131,7 +131,7 @@ export function Header() {
             )}
 
             {/* Quick action button for sellers */}
-            {user && user.role === 'Seller' && (
+            {user && user.role === 'seller' && (
               <Link
                 href="/products/create"
                 className="flex items-center space-x-1 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
@@ -177,7 +177,7 @@ export function Header() {
                       
                       <div className="py-2">
                         <Link
-                          href={user.role === 'Buyer' ? '/dashboard/provider' : '/dashboard/seller'}
+                          href={user.role === 'buyer' ? '/dashboard/provider' : '/dashboard/seller'}
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
@@ -185,7 +185,7 @@ export function Header() {
                           Dashboard
                         </Link>
                         
-                        {user.role === 'Buyer' ? (
+                        {user.role === 'buyer' ? (
                           <Link
                             href="/dashboard/provider?tab=purchases"
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -342,7 +342,7 @@ export function Header() {
                   </div>
                   
                   <Link
-                    href={user.role === 'Buyer' ? '/dashboard/provider' : '/dashboard/seller'}
+                    href={user.role === 'buyer' ? '/dashboard/provider' : '/dashboard/seller'}
                     className="flex items-center justify-center space-x-2 w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium transition-all duration-200 shadow-sm"
                     onClick={() => setIsMenuOpen(false)}
                   >

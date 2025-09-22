@@ -79,6 +79,8 @@ export default function BuyerSignupPage() {
       });
 
       if (result.success) {
+        // Store email in localStorage for resend functionality
+        localStorage.setItem('pendingVerificationEmail', formData.email);
         // Redirect to email verification page with role info
         router.push(`/auth/verify-email?role=Buyer&email=${encodeURIComponent(formData.email)}`);
       } else {

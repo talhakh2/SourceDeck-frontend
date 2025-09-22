@@ -40,7 +40,7 @@ interface User {
   uid?: string;
   name: string;
   email: string;
-  role?: 'Buyer' | 'Seller';
+  role?: 'buyer' | 'seller';
   emailVerified: boolean;
   profile?: {
     company?: string;
@@ -65,15 +65,15 @@ interface HybridAuthContextType {
   authType: 'firebase' | 'manual' | null;
   
   // Manual authentication methods
-  registerManual: (userData: { name: string; email: string; password: string; confirmPassword: string; role: 'Buyer' | 'Seller' }) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
-  loginManual: (email: string, password: string) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
-  verifyEmail: (token: string) => Promise<{ success: boolean; message?: string }>;
-  completeRegistration: (role: 'Buyer' | 'Seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
+  registerManual: (userData: { name: string; email: string; password: string; confirmPassword: string; role: 'buyer' | 'seller' }) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
+  loginManual: (email: string, password: string) => Promise<{ success: boolean; errors?: any[]; message?: string; user?: User }>;
+  verifyEmail: (token: string) => Promise<{ success: boolean; message?: string; data?: { user?: any; token?: string } }>;
+  completeRegistration: (role: 'buyer' | 'seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
   resendVerificationEmail: (email: string) => Promise<{ success: boolean; message?: string }>;
   
   // Firebase authentication methods
-  loginWithGoogle: () => Promise<{ success: boolean; errors?: any[]; message?: string }>;
-  registerWithGoogle: (role: 'Buyer' | 'Seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; errors?: any[]; message?: string; user?: User; googleUser?: any }>;
+  registerWithGoogle: (role: 'buyer' | 'seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
   
   // Common methods
   logout: () => Promise<void>;
@@ -188,7 +188,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
     email: string; 
     password: string; 
     confirmPassword: string;
-    role: 'Buyer' | 'Seller';
+    role: 'buyer' | 'seller';
   }): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     try {
       const response = await apiClient.registerManual(userData);
@@ -230,7 +230,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         setAuthType('manual');
         setIsEmailVerified(response.data.user.emailVerified);
         
-        return { success: true, message: 'Successfully signed in' };
+        return { success: true, message: 'Successfully signed in', user: response.data.user };
       } else {
         return { 
           success: false, 
@@ -250,7 +250,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Verify email with token
    */
-  const verifyEmail = async (token: string): Promise<{ success: boolean; message?: string }> => {
+  const verifyEmail = async (token: string): Promise<{ success: boolean; message?: string; data?: { user?: any; token?: string } }> => {
     try {
       const response = await apiClient.verifyEmail(token);
       
@@ -268,7 +268,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
           setUser({ ...user, emailVerified: true });
         }
         
-        return { success: true, message: 'Email verified successfully!' };
+        return { 
+          success: true, 
+          message: response.message || 'Email verified successfully!',
+          data: response.data
+        };
       } else {
         return { success: false, message: response.message };
       }
@@ -284,7 +288,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Complete registration with role (after email verification)
    */
-  const completeRegistration = async (role: 'Buyer' | 'Seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
+  const completeRegistration = async (role: 'buyer' | 'seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     try {
       const response = await apiClient.completeRegistration(role, profileData);
       
@@ -344,22 +348,32 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
       
-      // Check if user exists in backend
-      try {
-        const response = await apiClient.getCurrentUser();
-        if (response.success && response.data) {
-          // Existing user - set user data
+      // Verify Google token with backend
+      const response = await apiClient.loginFirebase(firebaseUser);
+      
+      if (response.success && response.data) {
+        if (response.data.exists) {
+          // Existing user - set user data and store token if provided
+          if (response.data.token) {
+            localStorage.setItem('authToken', response.data.token);
+          }
           setUser(response.data.user);
           setAuthType('manual'); // Use manual auth type for unified JWT system
-          return { success: true, message: 'Successfully signed in with Google' };
+          return { success: true, message: 'Successfully signed in with Google', user: response.data.user };
+        } else {
+          // New user - return Google info for role selection
+          return { 
+            success: true, 
+            message: 'New user - role selection needed',
+            googleUser: response.data.user
+          };
         }
-      } catch (error) {
-        // User not found - new user
-        console.log('New Google user detected');
+      } else {
+        return { 
+          success: false, 
+          message: response.message || 'Google authentication failed' 
+        };
       }
-      
-      // For new users, we'll handle role selection in the component
-      return { success: true, message: 'New user - role selection needed' };
     } catch (error: any) {
       console.error('Google login failed:', error);
       let message = 'Google login failed. Please try again.';
@@ -386,7 +400,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Register with Google (create new user with role)
    */
-  const registerWithGoogle = async (role: 'Buyer' | 'Seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
+  const registerWithGoogle = async (role: 'buyer' | 'seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     try {
       console.log('Starting Google registration for role:', role);
       const result = await signInWithPopup(auth, googleProvider);
@@ -478,28 +492,24 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
    */
   const resetPassword = async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      // Try Firebase password reset first
-      await sendPasswordResetEmail(auth, email);
-      return { 
-        success: true, 
-        message: 'Password reset email sent! Please check your inbox.' 
-      };
+      const response = await apiClient.forgotPassword(email);
+      
+      if (response.success) {
+        return { 
+          success: true, 
+          message: response.message || 'Password reset email sent! Please check your inbox.' 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: response.message || 'Failed to send password reset email.' 
+        };
+      }
     } catch (error: any) {
       console.error('Password reset failed:', error);
-      let message = 'Failed to send password reset email.';
-      
-      switch (error.code) {
-        case 'auth/user-not-found':
-          message = 'No account found with this email address.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Invalid email address.';
-          break;
-      }
-      
       return { 
         success: false, 
-        message 
+        message: error.message || 'Failed to send password reset email. Please try again.' 
       };
     }
   };

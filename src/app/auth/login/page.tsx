@@ -21,11 +21,19 @@ export default function LoginPage() {
   // Handle redirection when user data is available
   useEffect(() => {
     if (user) {
-      if (user.role === 'Buyer') {
-        router.push('/dashboard/provider');
-      } else if (user.role === 'Seller') {
-        router.push('/dashboard/seller');
-      }
+      console.log('User logged in, redirecting based on role:', user.role);
+      // Add a small delay to ensure the user state is fully set
+      const redirectTimer = setTimeout(() => {
+        if (user.role === 'buyer') {
+          console.log('Redirecting buyer to provider dashboard');
+          router.push('/dashboard/provider');
+        } else if (user.role === 'seller') {
+          console.log('Redirecting seller to seller dashboard');
+          router.push('/dashboard/seller');
+        }
+      }, 100);
+
+      return () => clearTimeout(redirectTimer);
     }
   }, [user, router]);
 
@@ -39,8 +47,27 @@ export default function LoginPage() {
       const result = await loginManual(formData.email, formData.password);
       
       if (result.success) {
-        // User data will be set by auth context and redirection handled by useEffect
-        // No need to redirect here
+        console.log('Login successful, redirecting...');
+        console.log('Full result object:', result);
+        console.log('User object:', result.user);
+        console.log('User role:', result.user?.role);
+        console.log('User role type:', typeof result.user?.role);
+        
+        // Use the user data from the result for immediate redirection
+        const userRole = result.user?.role;
+        console.log('Redirecting with role:', userRole);
+        
+        if (userRole === 'buyer') {
+          console.log('Redirecting to buyer dashboard');
+          router.push('/dashboard/provider');
+        } else if (userRole === 'seller') {
+          console.log('Redirecting to seller dashboard');
+          router.push('/dashboard/seller');
+        } else {
+          console.log('Unknown role, redirecting to home page');
+          // Fallback: redirect to home page
+          router.push('/');
+        }
       } else {
         // Handle validation errors
         if (result.errors && result.errors.length > 0) {
@@ -210,10 +237,18 @@ export default function LoginPage() {
                     try {
                       const result = await loginWithGoogle();
                       if (result.success) {
-                        // For existing users, redirection is handled by useEffect
+                        // For existing users, redirect immediately
                         // For new users, they should register first
                         if (result.message === 'New user - role selection needed') {
                           setError('Please register first to create your account with a role.');
+                        } else if (result.user) {
+                          console.log('Google login successful, redirecting...');
+                          const userRole = result.user.role;
+                          if (userRole === 'buyer') {
+                            router.push('/dashboard/provider');
+                          } else if (userRole === 'seller') {
+                            router.push('/dashboard/seller');
+                          }
                         }
                       } else {
                         setError(result.message || 'Google login failed');

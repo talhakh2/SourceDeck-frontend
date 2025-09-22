@@ -72,7 +72,7 @@ export default function ProductDetailPage() {
       }
       
       // For buyers, check if they have purchased the product
-      if (user && user.role === 'Buyer') {
+      if (user && user.role === 'buyer') {
         const response = await apiClient.verifyAccess(params.id as string);
         if (response.success && response.data?.hasAccess) {
           setHasAccess(true);

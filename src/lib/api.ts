@@ -119,7 +119,7 @@ class ApiClient {
     };
 
     // Add JWT token (unified authentication) - only if not already set
-    if (typeof window !== 'undefined' && !config.headers?.Authorization) {
+    if (typeof window !== 'undefined' && !(config.headers as any)?.Authorization) {
       // Get JWT token from localStorage (unified authentication)
       const jwtToken = localStorage.getItem('authToken');
       if (jwtToken) {
@@ -220,7 +220,7 @@ class ApiClient {
     });
   }
 
-  // Consolidated Auth API - Manual authentication
+  // Auth API - Manual authentication
   async registerManual(userData: {
     name: string;
     email: string;
@@ -228,51 +228,67 @@ class ApiClient {
     confirmPassword: string;
     role: 'Buyer' | 'Seller';
   }): Promise<ApiResponse<{ user: any; emailSent: boolean }>> {
-    return this.request<{ user: any; emailSent: boolean }>('/auth-consolidated/register-manual', {
+    // Convert role to lowercase for backend compatibility
+    const backendData = {
+      ...userData,
+      role: userData.role.toLowerCase()
+    };
+    return this.request<{ user: any; emailSent: boolean }>('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: JSON.stringify(backendData),
     });
   }
 
   async loginManual(email: string, password: string): Promise<ApiResponse<{ user: any; token: string }>> {
-    return this.request<{ user: any; token: string }>('/auth-consolidated/login', {
+    return this.request<{ user: any; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
   async verifyEmail(token: string): Promise<ApiResponse<{ user: any }>> {
-    return this.request<{ user: any }>(`/auth-consolidated/verify/${token}`, {
+    return this.request<{ user: any }>(`/auth/verify/${token}`, {
       method: 'GET',
     });
   }
 
   async completeRegistration(role: 'Buyer' | 'Seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
-    return this.request<{ user: any; token: string }>('/auth-consolidated/complete-registration', {
-      method: 'POST',
-      body: JSON.stringify({ role, profile: profileData }),
+    // This endpoint doesn't exist in backend, we'll handle role selection differently
+    return this.request<{ user: any; token: string }>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ role: role.toLowerCase(), ...profileData }),
     });
   }
 
   async resendVerificationEmail(email: string): Promise<ApiResponse<{}>> {
-    return this.request<{}>('/auth-consolidated/resend-verification', {
+    return this.request<{}>('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
   }
 
-  // Consolidated Auth API - Firebase authentication
+  async forgotPassword(email: string): Promise<ApiResponse<{}>> {
+    return this.request<{}>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<ApiResponse<{}>> {
+    return this.request<{}>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password, confirmPassword }),
+    });
+  }
+
+  // Auth API - Firebase authentication
   async registerFirebase(firebaseUser: any, role: 'Buyer' | 'Seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
     // Get the Firebase ID token
     const idToken = await firebaseUser.getIdToken();
     
-    return this.request<{ user: any; token: string }>('/auth-consolidated/firebase-login', {
+    return this.request<{ user: any; token: string }>('/auth/google', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ role, profile: profileData }),
+      body: JSON.stringify({ idToken, role: role.toLowerCase(), profile: profileData }),
     });
   }
 
@@ -280,12 +296,9 @@ class ApiClient {
     // Get the Firebase ID token
     const idToken = await firebaseUser.getIdToken();
     
-    return this.request<{ user: any; token: string }>('/auth-consolidated/firebase-login', {
+    return this.request<{ user: any; token: string }>('/auth/google/verify', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      },
+      body: JSON.stringify({ idToken }),
     });
   }
 
@@ -312,7 +325,7 @@ class ApiClient {
 
   // User API
   async getCurrentUser(): Promise<ApiResponse<{ user: any }>> {
-    return this.request<{ user: any }>('/auth-consolidated/me');
+    return this.request<{ user: any }>('/auth/me');
   }
 
   // Stats API (for homepage)

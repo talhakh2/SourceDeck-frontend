@@ -11,9 +11,9 @@ export default function OldManualRegisterRedirect() {
     // Get role from URL params and redirect to appropriate signup page
     const role = searchParams.get('role');
     
-    if (role === 'Seller') {
+    if (role === 'seller') {
       router.replace('/signup/seller');
-    } else if (role === 'Buyer') {
+    } else if (role === 'buyer') {
       router.replace('/signup/buyer');
     } else {
       // Default to role selection page

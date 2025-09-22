@@ -97,11 +97,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Load cart from database (for authenticated users)
   const loadDatabaseCart = useCallback(async () => {
-    if (!user || user.role !== 'Buyer' || isLoading) return;
+    if (!user || user.role !== 'buyer' || isLoading) return;
     
     setIsLoading(true);
     try {
       const response = await apiClient.getCart();
+      
       if (response.success && response.data?.cart) {
         const dbCart = response.data.cart;
         const dbItems = dbCart.items
@@ -122,6 +123,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error loading database cart:', error);
+      console.error('Error details:', error.response || error.message);
       // Fallback to local cart
       loadLocalCart();
     } finally {
@@ -138,7 +140,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lastUserIdRef.current = currentUserId;
       hasInitializedRef.current = true;
       
-      if (user && user.role === 'Buyer') {
+      if (user && user.role === 'buyer') {
         loadDatabaseCart();
       } else {
         loadLocalCart();
@@ -149,7 +151,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Save to localStorage whenever items change (for guest users) - FIXED
   useEffect(() => {
-    if (isLoaded && (!user || user.role !== 'Buyer')) {
+    if (isLoaded && (!user || user.role !== 'buyer')) {
       saveLocalCart(itemsRef.current);
     }
   }, [items, isLoaded, user?.role, saveLocalCart]); // Removed user dependency
@@ -197,12 +199,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
     itemsRef.current = newItems;
 
     // If user is authenticated, sync with database
-    if (user && user.role === 'Buyer') {
+    if (user && user.role === 'buyer') {
       try {
-        await apiClient.addToCart(product._id);
+        console.log('Adding item to database cart:', product._id);
+        console.log('User:', user);
+        console.log('User ID:', user._id);
+        console.log('User role:', user.role);
+        console.log('Auth token:', localStorage.getItem('authToken'));
+        
+        // Check if token exists and is valid format
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.error('No auth token found in localStorage');
+          toast.error('Authentication token not found. Please login again.');
+          return;
+        }
+        
+        // Decode token to check if it's valid (basic check)
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length !== 3) {
+            console.error('Invalid token format');
+            toast.error('Invalid authentication token. Please login again.');
+            return;
+          }
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log('Token payload:', payload);
+        } catch (tokenError) {
+          console.error('Error decoding token:', tokenError);
+          toast.error('Invalid authentication token. Please login again.');
+          return;
+        }
+        
+        const response = await apiClient.addToCart(product._id);
+        console.log('Add to cart response:', response);
+        
         // Database cart will be updated, no need to update local state
       } catch (error) {
         console.error('Error adding item to database cart:', error);
+        console.error('Error details:', error.response || error.message);
         toast.error('Failed to add item to cart. Please try again.');
         // Revert local state
         setItems(itemsRef.current);
@@ -232,7 +267,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     itemsRef.current = newItems;
 
     // If user is authenticated, sync with database
-    if (user && user.role === 'Buyer') {
+    if (user && user.role === 'buyer') {
       try {
         await apiClient.removeFromCart(productId);
       } catch (error) {
@@ -259,7 +294,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     itemsRef.current = [];
 
     // If user is authenticated, sync with database
-    if (user && user.role === 'Buyer') {
+    if (user && user.role === 'buyer') {
       try {
         await apiClient.clearCart();
       } catch (error) {
@@ -282,7 +317,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshCart = async () => {
-    if (user && user.role === 'Buyer') {
+    if (user && user.role === 'buyer') {
       await loadDatabaseCart();
     }
   };
@@ -340,7 +375,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         itemsRef.current = mergedItems;
         
         // If user is authenticated, sync merged cart to database
-        if (user && user.role === 'Buyer') {
+        if (user && user.role === 'buyer') {
           const itemsToSync = mergedItems.map(item => ({
             productId: item.product._id,
             addedAt: item.addedAt

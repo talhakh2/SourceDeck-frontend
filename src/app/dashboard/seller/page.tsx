@@ -187,7 +187,7 @@ export default function SellerDashboard() {
   ];
 
   return (
-    <ProtectedRoute requiredRole="Seller">
+    <ProtectedRoute requiredRole="seller">
       <Dashboard>
         <DashboardHeader
           title="Seller Dashboard"

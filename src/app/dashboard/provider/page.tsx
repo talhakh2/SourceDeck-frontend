@@ -184,7 +184,7 @@ export default function BuyerDashboard() {
   ];
 
   return (
-    <ProtectedRoute requiredRole="Buyer">
+    <ProtectedRoute requiredRole="buyer">
       <Dashboard>
         <DashboardHeader
           title="Buyer Dashboard"

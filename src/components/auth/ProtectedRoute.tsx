@@ -6,7 +6,7 @@ import { useHybridAuth } from '@/contexts/HybridAuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'Buyer' | 'Seller';
+  requiredRole?: 'buyer' | 'seller';
   redirectTo?: string;
 }
 
@@ -33,10 +33,10 @@ export function ProtectedRoute({
 
       if (requiredRole && user.role !== requiredRole) {
         // Redirect to appropriate dashboard based on user role
-        if (user.role === 'Buyer') {
-          router.push('/dashboard/provider');
+        if (user.role === 'buyer') {
+          router.replace('/dashboard/provider');
         } else {
-          router.push('/dashboard/seller');
+          router.replace('/dashboard/seller');
         }
         return;
       }
@@ -56,7 +56,12 @@ export function ProtectedRoute({
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    return null;
+    // Show loading while redirecting
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="spinner w-8 h-8"></div>
+      </div>
+    );
   }
 
   return <>{children}</>;

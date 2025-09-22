@@ -64,7 +64,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
       lastUserIdRef.current = currentUserId;
       hasInitializedRef.current = true;
       
-      if (user && user.role === 'Buyer') {
+      if (user && user.role === 'buyer') {
         refreshPurchases();
       } else {
         setPurchasedProducts(new Set());

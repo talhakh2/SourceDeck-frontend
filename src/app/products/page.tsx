@@ -96,7 +96,7 @@ export default function ProductsPage() {
       return;
     }
     
-    if (user.role !== 'Buyer') {
+    if (user.role !== 'buyer') {
       toast.error('Only buyers can add items to cart');
       return;
     }
@@ -111,7 +111,7 @@ export default function ProductsPage() {
       return;
     }
     
-    if (user.role !== 'Buyer') {
+    if (user.role !== 'buyer') {
       toast.error('Only buyers can view product details');
       return;
     }
@@ -136,7 +136,7 @@ export default function ProductsPage() {
             </div>
             
             <div className="flex items-center gap-4">
-              {user && user.role === 'Seller' ? (
+              {user && user.role === 'seller' ? (
                 <Link
                   href="/dashboard/seller"
                   className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md hover:scale-105 transform"
@@ -273,7 +273,7 @@ export default function ProductsPage() {
                               <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
                                 {product.title}
                               </h3>
-                              {user && user.role === 'Buyer' && isPurchased(product._id) && (
+                              {user && user.role === 'buyer' && isPurchased(product._id) && (
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Purchased
@@ -377,7 +377,7 @@ export default function ProductsPage() {
                           >
                             View Details
                           </button>
-                          {user && user.role === 'Buyer' ? (
+                          {user && user.role === 'buyer' ? (
                             isPurchased(product._id) ? (
                               <Link
                                 href={`/products/${product._id}`}
