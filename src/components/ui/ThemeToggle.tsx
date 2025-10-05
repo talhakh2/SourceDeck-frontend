@@ -41,11 +41,13 @@ export function ThemeToggle() {
       </Button>
 
       {/* Theme selection dropdown */}
-      <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+      <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50" role="menu" aria-label="Theme selection">
         {themes.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
             onClick={() => setTheme(value)}
+            role="menuitem"
+            aria-checked={theme === value}
             className={`w-full flex items-center space-x-3 px-3 py-2 text-sm transition-colors ${
               theme === value
                 ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'

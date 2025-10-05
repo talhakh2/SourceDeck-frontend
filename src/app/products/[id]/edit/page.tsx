@@ -7,6 +7,57 @@ import { apiClient, Product } from '@/lib/api';
 import { useHybridAuth } from '@/contexts/HybridAuthContext';
 import toast from 'react-hot-toast';
 
+// Constants for dropdown options
+const estimatedMonthlySalesOptions = [
+  '0-100', '100-500', '500-1000', '1000-5000', '5000-10000', '10000+'
+];
+
+const estimatedMonthlyRevenueOptions = [
+  '$0-$1K', '$1K-$5K', '$5K-$10K', '$10K-$50K', '$50K-$100K', '$100K+'
+];
+
+const competitionLevels = ['Low', 'Medium', 'High'];
+
+const searchVolumeBrackets = [
+  'Low (0-1K)', 'Medium (1K-10K)', 'High (10K-100K)', 'Very High (100K+)'
+];
+
+const fbaFeesCategories = ['Low', 'Medium', 'High'];
+
+const seasonalityOptions = ['Year-round', 'Seasonal', 'Holiday-specific'];
+
+const bsrMovementOptions = ['Stable', 'Volatile', 'Declining', 'Growing'];
+
+const supplierRegions = ['China', 'India', 'Vietnam', 'Thailand', 'Mexico', 'USA', 'Europe'];
+
+const deliveryTimeOptions = ['1-2 weeks', '2-4 weeks', '1-2 months', '2-3 months'];
+
+const launchComplexityOptions = ['Low', 'Medium', 'High'];
+
+const categories = [
+  'Electronics',
+  'Home & Kitchen',
+  'Health & Personal Care',
+  'Sports & Outdoors',
+  'Beauty & Personal Care',
+  'Toys & Games',
+  'Automotive',
+  'Pet Supplies',
+  'Books',
+  'Clothing & Accessories',
+  'Garden & Outdoor',
+  'Office Products',
+  'Industrial & Scientific',
+  'Baby Products',
+  'Grocery & Gourmet Food'
+];
+
+const statusOptions = [
+  { value: 'draft', label: 'Draft', description: 'Save as draft for later editing' },
+  { value: 'published', label: 'Published', description: 'Make available to buyers' },
+  { value: 'archived', label: 'Archived', description: 'Archive this product research' }
+];
+
 export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
@@ -16,24 +67,58 @@ export default function EditProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: '',
-    category: 'Physical Products',
+    category: 'Electronics',
     price: '',
     status: 'draft',
     previewData: {
-      kpiSummary: {
-        roiPercentage: '',
-        estimatedCost: '',
-        revenueForecast: ''
-      }
+      productCategory: '',
+      subCategory: '',
+      estimatedMonthlySales: '0-100' as const,
+      estimatedMonthlyRevenue: '$0-$1K' as const,
+      averageSellingPrice: '',
+      competitionLevel: 'Low' as const,
+      searchVolumeBracket: 'Low (0-1K)' as const,
+      estimatedMargin: '',
+      fbaFeesCategory: 'Low' as const,
+      seasonality: 'Year-round' as const,
+      confidenceScore: 5,
+      productName: '',
+      keywords: [] as string[],
+      asin: '',
+      supplierInformation: ''
     },
     fullData: {
-      detailedKpis: {
-        roiPercentage: '',
-        estimatedCost: '',
-        revenueForecast: '',
-        profitMargin: '',
-        paybackPeriod: '1-3 months',
-        marketSize: 'Small'
+      deeperKpis: {
+        estimatedMonthlySales: '0-100' as const,
+        demandTrendChart: '',
+        competitorReviewDistribution: '',
+        averageBsrMovement: 'Stable' as const,
+        ppcLandscape: {
+          cpc: '',
+          budget: ''
+        },
+        targetPricePoint: '',
+        landedCost: '',
+        fbaFees: '',
+        netMarginBreakdown: ''
+      },
+      profitabilityBreakdown: {
+        customerPainPoints: '',
+        bundlingIdeas: '',
+        discountOffersTemplates: '',
+        materialUpgrades: ''
+      },
+      differentiationOpportunities: {
+        supplierRegion: 'China' as const,
+        moq: '',
+        deliveryTime: '1-2 weeks' as const,
+        launchComplexity: 'Low' as const
+      },
+      productInformation: {
+        productName: '',
+        keywords: [] as string[],
+        asin: '',
+        supplierLink: ''
       },
       sourcingStrategy: '',
       launchPlan: '',
@@ -45,25 +130,21 @@ export default function EditProductPage() {
   const [newTag, setNewTag] = useState('');
 
   const categories = [
-    'Physical Products',
-    'SaaS',
-    'Digital Products',
-    'Services',
+    'Electronics',
+    'Home & Kitchen',
+    'Health & Personal Care',
+    'Sports & Outdoors',
+    'Beauty & Personal Care',
+    'Toys & Games',
+    'Automotive',
+    'Pet Supplies',
+    'Books',
+    'Clothing & Accessories',
+    'Garden & Outdoor',
+    'Office Products',
+    'Baby Products',
+    'Tools & Home Improvement',
     'Other'
-  ];
-
-  const paybackPeriods = [
-    '1-3 months',
-    '3-6 months',
-    '6-12 months',
-    '12+ months'
-  ];
-
-  const marketSizes = [
-    'Small',
-    'Medium',
-    'Large',
-    'Enterprise'
   ];
 
   const statusOptions = [
@@ -82,215 +163,97 @@ export default function EditProductPage() {
     MAX_TAGS: 10
   };
 
-  // Load product data
   useEffect(() => {
     if (params.id) {
-      loadProduct();
+      fetchProduct();
     }
   }, [params.id]);
 
-  const loadProduct = async () => {
+  const fetchProduct = async () => {
     try {
-      // First get the basic product info
+      setIsLoadingProduct(true);
       const response = await apiClient.getProduct(params.id as string);
-      if (response.success && response.data) {
-        const product = response.data.product;
+      
+      if (response.success && response.data?.product) {
+        const fullProduct = response.data.product;
         
-        // Check if user is the seller
-        if (user && user._id !== product.sellerId?._id) {
-          toast.error('You can only edit your own products', {
-            duration: 4000,
-            icon: '❌',
-          });
-          router.push(`/products/${params.id}`);
-          return;
-        }
-
-        // Now fetch the full product data
-        try {
-          const fullResponse = await apiClient.request<{ product: Product }>(`/products/${params.id}/full`);
-          if (fullResponse.success && fullResponse.data) {
-            const fullProduct = fullResponse.data.product;
-            setFormData({
-              title: fullProduct.title || '',
-              category: fullProduct.category || 'Physical Products',
-              price: fullProduct.price?.toString() || '',
-              status: fullProduct.status || 'draft',
-              previewData: {
-                kpiSummary: {
-                  roiPercentage: fullProduct.previewData?.kpiSummary?.roiPercentage?.toString() || '',
-                  estimatedCost: fullProduct.previewData?.kpiSummary?.estimatedCost?.toString() || '',
-                  revenueForecast: fullProduct.previewData?.kpiSummary?.revenueForecast?.toString() || ''
-                }
+        setFormData({
+          title: fullProduct.title || '',
+          category: fullProduct.category || 'Electronics',
+          price: fullProduct.price?.toString() || '',
+          status: fullProduct.status || 'draft',
+          previewData: {
+            productCategory: fullProduct.previewData?.productCategory || '',
+            subCategory: fullProduct.previewData?.subCategory || '',
+            estimatedMonthlySales: (fullProduct.previewData?.estimatedMonthlySales as any) || '0-100',
+            estimatedMonthlyRevenue: (fullProduct.previewData?.estimatedMonthlyRevenue as any) || '$0-$1K',
+            averageSellingPrice: fullProduct.previewData?.averageSellingPrice?.toString() || '',
+            competitionLevel: (fullProduct.previewData?.competitionLevel as any) || 'Low',
+            searchVolumeBracket: (fullProduct.previewData?.searchVolumeBracket as any) || 'Low (0-1K)',
+            estimatedMargin: fullProduct.previewData?.estimatedMargin?.toString() || '',
+            fbaFeesCategory: (fullProduct.previewData?.fbaFeesCategory as any) || 'Low',
+            seasonality: (fullProduct.previewData?.seasonality as any) || 'Year-round',
+            confidenceScore: fullProduct.previewData?.confidenceScore || 5,
+            productName: fullProduct.previewData?.productName || '',
+            keywords: fullProduct.previewData?.keywords || [],
+            asin: fullProduct.previewData?.asin || '',
+            supplierInformation: fullProduct.previewData?.supplierInformation || ''
+          },
+          fullData: {
+            deeperKpis: {
+              estimatedMonthlySales: (fullProduct.fullData?.deeperKpis?.estimatedMonthlySales as any) || '0-100',
+              demandTrendChart: fullProduct.fullData?.deeperKpis?.demandTrendChart || '',
+              competitorReviewDistribution: fullProduct.fullData?.deeperKpis?.competitorReviewDistribution || '',
+              averageBsrMovement: (fullProduct.fullData?.deeperKpis?.averageBsrMovement as any) || 'Stable',
+              ppcLandscape: {
+                cpc: fullProduct.fullData?.deeperKpis?.ppcLandscape?.cpc?.toString() || '',
+                budget: fullProduct.fullData?.deeperKpis?.ppcLandscape?.budget?.toString() || ''
               },
-              fullData: {
-                detailedKpis: {
-                  roiPercentage: fullProduct.fullData?.detailedKpis?.roiPercentage?.toString() || '',
-                  estimatedCost: fullProduct.fullData?.detailedKpis?.estimatedCost?.toString() || '',
-                  revenueForecast: fullProduct.fullData?.detailedKpis?.revenueForecast?.toString() || '',
-                  profitMargin: fullProduct.fullData?.detailedKpis?.profitMargin?.toString() || '',
-                  paybackPeriod: fullProduct.fullData?.detailedKpis?.paybackPeriod || '1-3 months',
-                  marketSize: fullProduct.fullData?.detailedKpis?.marketSize || 'Small'
-                },
-                sourcingStrategy: fullProduct.fullData?.sourcingStrategy || '',
-                launchPlan: fullProduct.fullData?.launchPlan || '',
-                additionalNotes: fullProduct.fullData?.additionalNotes || ''
-              },
-              tags: fullProduct.tags || [],
-              pdfUrl: fullProduct.pdfUrl || ''
-            });
-          } else {
-            // Fallback to basic product data if full data is not available
-            setFormData({
-              title: product.title || '',
-              category: product.category || 'Physical Products',
-              price: product.price?.toString() || '',
-              status: product.status || 'draft',
-              previewData: {
-                kpiSummary: {
-                  roiPercentage: product.previewData?.kpiSummary?.roiPercentage?.toString() || '',
-                  estimatedCost: product.previewData?.kpiSummary?.estimatedCost?.toString() || '',
-                  revenueForecast: product.previewData?.kpiSummary?.revenueForecast?.toString() || ''
-                }
-              },
-              fullData: {
-                detailedKpis: {
-                  roiPercentage: product.fullData?.detailedKpis?.roiPercentage?.toString() || '',
-                  estimatedCost: product.fullData?.detailedKpis?.estimatedCost?.toString() || '',
-                  revenueForecast: product.fullData?.detailedKpis?.revenueForecast?.toString() || '',
-                  profitMargin: product.fullData?.detailedKpis?.profitMargin?.toString() || '',
-                  paybackPeriod: product.fullData?.detailedKpis?.paybackPeriod || '1-3 months',
-                  marketSize: product.fullData?.detailedKpis?.marketSize || 'Small'
-                },
-                sourcingStrategy: product.fullData?.sourcingStrategy || '',
-                launchPlan: product.fullData?.launchPlan || '',
-                additionalNotes: product.fullData?.additionalNotes || ''
-              },
-              tags: product.tags || [],
-              pdfUrl: product.pdfUrl || ''
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching full product data:', error);
-          // Use basic product data as fallback
-          setFormData({
-            title: product.title || '',
-            category: product.category || 'Physical Products',
-            price: product.price?.toString() || '',
-            status: product.status || 'draft',
-            previewData: {
-              kpiSummary: {
-                roiPercentage: product.previewData?.kpiSummary?.roiPercentage?.toString() || '',
-                estimatedCost: product.previewData?.kpiSummary?.estimatedCost?.toString() || '',
-                revenueForecast: product.previewData?.kpiSummary?.revenueForecast?.toString() || ''
-              }
+              targetPricePoint: fullProduct.fullData?.deeperKpis?.targetPricePoint?.toString() || '',
+              landedCost: fullProduct.fullData?.deeperKpis?.landedCost?.toString() || '',
+              fbaFees: fullProduct.fullData?.deeperKpis?.fbaFees?.toString() || '',
+              netMarginBreakdown: fullProduct.fullData?.deeperKpis?.netMarginBreakdown || ''
             },
-            fullData: {
-              detailedKpis: {
-                roiPercentage: product.fullData?.detailedKpis?.roiPercentage?.toString() || '',
-                estimatedCost: product.fullData?.detailedKpis?.estimatedCost?.toString() || '',
-                revenueForecast: product.fullData?.detailedKpis?.revenueForecast?.toString() || '',
-                profitMargin: product.fullData?.detailedKpis?.profitMargin?.toString() || '',
-                paybackPeriod: product.fullData?.detailedKpis?.paybackPeriod || '1-3 months',
-                marketSize: product.fullData?.detailedKpis?.marketSize || 'Small'
-              },
-              sourcingStrategy: product.fullData?.sourcingStrategy || '',
-              launchPlan: product.fullData?.launchPlan || '',
-              additionalNotes: product.fullData?.additionalNotes || ''
+            profitabilityBreakdown: {
+              customerPainPoints: fullProduct.fullData?.profitabilityBreakdown?.customerPainPoints || '',
+              bundlingIdeas: fullProduct.fullData?.profitabilityBreakdown?.bundlingIdeas || '',
+              discountOffersTemplates: fullProduct.fullData?.profitabilityBreakdown?.discountOffersTemplates || '',
+              materialUpgrades: fullProduct.fullData?.profitabilityBreakdown?.materialUpgrades || ''
             },
-            tags: product.tags || [],
-            pdfUrl: product.pdfUrl || ''
-          });
-        }
-      } else {
-        toast.error('Product not found', {
-          duration: 4000,
-          icon: '❌',
+            differentiationOpportunities: {
+              supplierRegion: (fullProduct.fullData?.differentiationOpportunities?.supplierRegion as any) || 'China',
+              moq: fullProduct.fullData?.differentiationOpportunities?.moq?.toString() || '',
+              deliveryTime: (fullProduct.fullData?.differentiationOpportunities?.deliveryTime as any) || '1-2 weeks',
+              launchComplexity: (fullProduct.fullData?.differentiationOpportunities?.launchComplexity as any) || 'Low'
+            },
+            productInformation: {
+              productName: fullProduct.fullData?.productInformation?.productName || '',
+              keywords: fullProduct.fullData?.productInformation?.keywords || [],
+              asin: fullProduct.fullData?.productInformation?.asin || '',
+              supplierLink: fullProduct.fullData?.productInformation?.supplierLink || ''
+            },
+            sourcingStrategy: fullProduct.fullData?.sourcingStrategy || '',
+            launchPlan: fullProduct.fullData?.launchPlan || '',
+            additionalNotes: fullProduct.fullData?.additionalNotes || ''
+          },
+          tags: fullProduct.tags || [],
+          pdfUrl: fullProduct.pdfUrl || ''
         });
-        router.push('/products');
+      } else {
+        toast.error('Failed to load product');
+        router.push('/dashboard/seller');
       }
     } catch (error) {
-      console.error('Error loading product:', error);
-      toast.error('Failed to load product', {
-        duration: 4000,
-        icon: '❌',
-      });
-      router.push('/products');
+      console.error('Error fetching product:', error);
+      toast.error('Failed to load product');
+      router.push('/dashboard/seller');
     } finally {
       setIsLoadingProduct(false);
     }
   };
 
-  // Validation functions
-  const validateField = (name: string, value: string): string => {
-    switch (name) {
-      case 'title':
-        if (!value.trim()) return 'Product title is required';
-        if (value.length < VALIDATION.TITLE_MIN_LENGTH) return `Title must be at least ${VALIDATION.TITLE_MIN_LENGTH} characters`;
-        if (value.length > VALIDATION.TITLE_MAX_LENGTH) return `Title cannot exceed ${VALIDATION.TITLE_MAX_LENGTH} characters`;
-        return '';
-      
-      case 'price':
-        if (!value) return 'Price is required';
-        const price = parseFloat(value);
-        if (isNaN(price) || price < 1) return 'Price must be at least $1';
-        return '';
-      
-      case 'fullData.sourcingStrategy':
-        if (!value.trim()) return 'Sourcing strategy is required';
-        if (value.length < VALIDATION.DESCRIPTION_MIN_LENGTH) return `Sourcing strategy must be at least ${VALIDATION.DESCRIPTION_MIN_LENGTH} characters (currently ${value.length})`;
-        if (value.length > VALIDATION.DESCRIPTION_MAX_LENGTH) return `Sourcing strategy cannot exceed ${VALIDATION.DESCRIPTION_MAX_LENGTH} characters`;
-        return '';
-      
-      case 'fullData.launchPlan':
-        if (!value.trim()) return 'Launch plan is required';
-        if (value.length < VALIDATION.DESCRIPTION_MIN_LENGTH) return `Launch plan must be at least ${VALIDATION.DESCRIPTION_MIN_LENGTH} characters (currently ${value.length})`;
-        if (value.length > VALIDATION.DESCRIPTION_MAX_LENGTH) return `Launch plan cannot exceed ${VALIDATION.DESCRIPTION_MAX_LENGTH} characters`;
-        return '';
-      
-      case 'fullData.additionalNotes':
-        if (value.length > VALIDATION.DESCRIPTION_MAX_LENGTH) return `Additional notes cannot exceed ${VALIDATION.DESCRIPTION_MAX_LENGTH} characters`;
-        return '';
-      
-      default:
-        return '';
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    // Validate required fields
-    const titleError = validateField('title', formData.title);
-    if (titleError) newErrors.title = titleError;
-    
-    const priceError = validateField('price', formData.price);
-    if (priceError) newErrors.price = priceError;
-    
-    const sourcingError = validateField('fullData.sourcingStrategy', formData.fullData.sourcingStrategy);
-    if (sourcingError) newErrors['fullData.sourcingStrategy'] = sourcingError;
-    
-    const launchError = validateField('fullData.launchPlan', formData.fullData.launchPlan);
-    if (launchError) newErrors['fullData.launchPlan'] = launchError;
-    
-    const notesError = validateField('fullData.additionalNotes', formData.fullData.additionalNotes);
-    if (notesError) newErrors['fullData.additionalNotes'] = notesError;
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form before submission
-    if (!validateForm()) {
-      toast.error('Please fix the validation errors before submitting', {
-        duration: 4000,
-        icon: '❌',
-      });
-      return;
-    }
     
     setIsLoading(true);
 
@@ -301,9 +264,8 @@ export default function EditProductPage() {
           duration: 3000,
           icon: '✅',
         });
-        router.push(`/products/${params.id}`);
+        router.push('/dashboard/seller');
       } else {
-        // Handle backend validation errors
         if (response.errors) {
           const backendErrors: Record<string, string> = {};
           response.errors.forEach((error: any) => {
@@ -330,7 +292,6 @@ export default function EditProductPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -339,59 +300,19 @@ export default function EditProductPage() {
       });
     }
     
-    if (name.includes('.')) {
-      const keys = name.split('.');
-      setFormData(prev => {
-        const newData = { ...prev };
-        
-        if (keys.length === 2) {
-          // Handle 2-level nesting (e.g., fullData.sourcingStrategy)
-          (newData as any)[keys[0]] = {
-            ...(newData as any)[keys[0]],
-            [keys[1]]: value
-          };
-        } else if (keys.length === 3) {
-          // Handle 3-level nesting (e.g., previewData.kpiSummary.roiPercentage)
-          (newData as any)[keys[0]] = {
-            ...(newData as any)[keys[0]],
-            [keys[1]]: {
-              ...((newData as any)[keys[0]] as any)[keys[1]],
-              [keys[2]]: value
-            }
-          };
-        }
-        
-        return newData;
-      });
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
-      setNewTag('');
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      [name]: value
     }));
   };
 
   if (isLoadingProduct) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="spinner w-8 h-8"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product...</p>
+        </div>
       </div>
     );
   }
@@ -411,10 +332,10 @@ export default function EditProductPage() {
             </button>
             <div className="flex-1">
               <h1 className="text-3xl font-display font-bold text-gray-900">
-                Edit Product
+                Edit Amazon FBA Product Research
               </h1>
               <p className="mt-2 text-gray-600">
-                Update your product research and insights
+                Update your product research details
               </p>
             </div>
           </div>
@@ -441,21 +362,18 @@ export default function EditProductPage() {
             </div>
           )}
 
-          {/* Basic Information */}
+          {/* Research Information */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title">Basic Information</h2>
+              <h2 className="card-title">Research Information</h2>
               <p className="card-description">
-                Provide the essential details about your product research.
+                Update the essential details about your Amazon FBA product research report.
               </p>
             </div>
             <div className="card-content space-y-6">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Title *
-                  <span className="text-xs text-gray-500 ml-2">
-                    ({formData.title.length}/{VALIDATION.TITLE_MAX_LENGTH} characters, minimum {VALIDATION.TITLE_MIN_LENGTH})
-                  </span>
+                  Research Title *
                 </label>
                 <input
                   type="text"
@@ -463,7 +381,7 @@ export default function EditProductPage() {
                   name="title"
                   required
                   className={`input ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="e.g., High-ROI Kitchen Gadget Research - 300% Profit Potential"
+                  placeholder="e.g., High-Margin Kitchen Gadget Research - 300% Profit Potential"
                   value={formData.title}
                   onChange={handleChange}
                 />
@@ -478,7 +396,7 @@ export default function EditProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
+                    Research Category *
                   </label>
                   <select
                     id="category"
@@ -498,8 +416,7 @@ export default function EditProductPage() {
 
                 <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (USD) *
-                    <span className="text-xs text-gray-500 ml-2">(minimum $1.00)</span>
+                    Research Price (USD) *
                   </label>
                   <input
                     type="number"
@@ -509,7 +426,7 @@ export default function EditProductPage() {
                     min="1"
                     step="0.01"
                     className={`input ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="99.00"
+                    placeholder="99.99"
                     value={formData.price}
                     onChange={handleChange}
                   />
@@ -524,7 +441,7 @@ export default function EditProductPage() {
 
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Status *
+                  Status *
                 </label>
                 <select
                   id="status"
@@ -540,305 +457,856 @@ export default function EditProductPage() {
                     </option>
                   ))}
                 </select>
-                <div className="mt-2 text-xs text-gray-500">
-                  💡 <strong>Draft:</strong> Not visible to buyers. <strong>Published:</strong> Visible to buyers. <strong>Archived:</strong> Hidden from buyers.
-                </div>
               </div>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags
-                </label>
-                <div className="flex gap-2 mb-3">
+          {/* Preview Data Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Preview Data Section</h2>
+              <p className="card-description">
+                Information visible on product cards and preview (publicly visible).
+              </p>
+            </div>
+            <div className="card-content space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="productCategory" className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Category *
+                  </label>
+                  <select
+                    id="productCategory"
+                    required
+                    className="input"
+                    value={formData.previewData.productCategory}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, productCategory: e.target.value }
+                    }))}
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="subCategory" className="block text-sm font-medium text-gray-700 mb-2">
+                    Sub Category *
+                  </label>
                   <input
                     type="text"
-                    className="input flex-1"
-                    placeholder="Add a tag"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                    id="subCategory"
+                    required
+                    className="input"
+                    placeholder="e.g., Air Purifiers, Smart Home"
+                    value={formData.previewData.subCategory}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, subCategory: e.target.value }
+                    }))}
                   />
-                  <button
-                    type="button"
-                    onClick={addTag}
-                    className="btn btn-outline"
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="estimatedMonthlySales" className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Monthly Sales *
+                  </label>
+                  <select
+                    id="estimatedMonthlySales"
+                    required
+                    className="input"
+                    value={formData.previewData.estimatedMonthlySales}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, estimatedMonthlySales: e.target.value as any }
+                    }))}
                   >
-                    <Plus className="h-4 w-4" />
-                  </button>
+                    {estimatedMonthlySalesOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="badge badge-primary flex items-center gap-1"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Preview Data */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Preview Data</h2>
-              <p className="card-description">
-                This information will be visible to all users before purchase.
-              </p>
-            </div>
-            <div className="card-content space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label htmlFor="previewData.kpiSummary.roiPercentage" className="block text-sm font-medium text-gray-700 mb-2">
-                    ROI Percentage *
+                  <label htmlFor="estimatedMonthlyRevenue" className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Monthly Revenue *
                   </label>
-                  <input
-                    type="number"
-                    id="previewData.kpiSummary.roiPercentage"
-                    name="previewData.kpiSummary.roiPercentage"
+                  <select
+                    id="estimatedMonthlyRevenue"
                     required
-                    min="0"
-                    step="0.1"
                     className="input"
-                    placeholder="25.0"
-                    value={formData.previewData.kpiSummary.roiPercentage}
-                    onChange={handleChange}
-                  />
+                    value={formData.previewData.estimatedMonthlyRevenue}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, estimatedMonthlyRevenue: e.target.value as any }
+                    }))}
+                  >
+                    {estimatedMonthlyRevenueOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label htmlFor="previewData.kpiSummary.estimatedCost" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estimated Cost *
+                  <label htmlFor="averageSellingPrice" className="block text-sm font-medium text-gray-700 mb-2">
+                    Average Selling Price ($) *
                   </label>
                   <input
                     type="number"
-                    id="previewData.kpiSummary.estimatedCost"
-                    name="previewData.kpiSummary.estimatedCost"
+                    id="averageSellingPrice"
                     required
                     min="0"
                     step="0.01"
                     className="input"
-                    placeholder="1000.00"
-                    value={formData.previewData.kpiSummary.estimatedCost}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="previewData.kpiSummary.revenueForecast" className="block text-sm font-medium text-gray-700 mb-2">
-                    Revenue Forecast *
-                  </label>
-                  <input
-                    type="number"
-                    id="previewData.kpiSummary.revenueForecast"
-                    name="previewData.kpiSummary.revenueForecast"
-                    required
-                    min="0"
-                    step="0.01"
-                    className="input"
-                    placeholder="5000.00"
-                    value={formData.previewData.kpiSummary.revenueForecast}
-                    onChange={handleChange}
+                    placeholder="29.99"
+                    value={formData.previewData.averageSellingPrice}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, averageSellingPrice: e.target.value }
+                    }))}
                   />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Full Data */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Detailed Information</h2>
-              <p className="card-description">
-                This information will only be visible to users who purchase your product.
-              </p>
-            </div>
-            <div className="card-content space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label htmlFor="fullData.detailedKpis.profitMargin" className="block text-sm font-medium text-gray-700 mb-2">
-                    Profit Margin (%)
+                  <label htmlFor="competitionLevel" className="block text-sm font-medium text-gray-700 mb-2">
+                    Competition Level *
+                  </label>
+                  <select
+                    id="competitionLevel"
+                    required
+                    className="input"
+                    value={formData.previewData.competitionLevel}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, competitionLevel: e.target.value as any }
+                    }))}
+                  >
+                    {competitionLevels.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="searchVolumeBracket" className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Volume Bracket *
+                  </label>
+                  <select
+                    id="searchVolumeBracket"
+                    required
+                    className="input"
+                    value={formData.previewData.searchVolumeBracket}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, searchVolumeBracket: e.target.value as any }
+                    }))}
+                  >
+                    {searchVolumeBrackets.map((bracket) => (
+                      <option key={bracket} value={bracket}>
+                        {bracket}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="estimatedMargin" className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Margin (%) *
                   </label>
                   <input
                     type="number"
-                    id="fullData.detailedKpis.profitMargin"
-                    name="fullData.detailedKpis.profitMargin"
+                    id="estimatedMargin"
+                    required
                     min="0"
                     max="100"
-                    step="0.1"
                     className="input"
-                    placeholder="15.0"
-                    value={formData.fullData.detailedKpis.profitMargin}
-                    onChange={handleChange}
+                    placeholder="35"
+                    value={formData.previewData.estimatedMargin}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, estimatedMargin: e.target.value }
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label htmlFor="fbaFeesCategory" className="block text-sm font-medium text-gray-700 mb-2">
+                    FBA Fees Category *
+                  </label>
+                  <select
+                    id="fbaFeesCategory"
+                    required
+                    className="input"
+                    value={formData.previewData.fbaFeesCategory}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, fbaFeesCategory: e.target.value as any }
+                    }))}
+                  >
+                    {fbaFeesCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="seasonality" className="block text-sm font-medium text-gray-700 mb-2">
+                    Seasonality *
+                  </label>
+                  <select
+                    id="seasonality"
+                    required
+                    className="input"
+                    value={formData.previewData.seasonality}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, seasonality: e.target.value as any }
+                    }))}
+                  >
+                    {seasonalityOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="confidenceScore" className="block text-sm font-medium text-gray-700 mb-2">
+                    Confidence Score (1-10) *
+                  </label>
+                  <input
+                    type="number"
+                    id="confidenceScore"
+                    required
+                    min="1"
+                    max="10"
+                    className="input"
+                    placeholder="8"
+                    value={formData.previewData.confidenceScore}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      previewData: { ...prev.previewData, confidenceScore: parseInt(e.target.value) }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Full Data Section - Deeper KPIs */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Deeper KPIs Section</h2>
+              <p className="card-description">
+                Detailed metrics and analysis (visible only to purchasers).
+              </p>
+            </div>
+            <div className="card-content space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="targetPricePoint" className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Price Point *
+                  </label>
+                  <input
+                    type="number"
+                    id="targetPricePoint"
+                    required
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    placeholder="29.99"
+                    value={formData.fullData.deeperKpis.targetPricePoint}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: { ...prev.fullData.deeperKpis, targetPricePoint: e.target.value }
+                      }
+                    }))}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="fullData.detailedKpis.paybackPeriod" className="block text-sm font-medium text-gray-700 mb-2">
-                    Payback Period
+                  <label htmlFor="landedCost" className="block text-sm font-medium text-gray-700 mb-2">
+                    Landed Cost *
+                  </label>
+                  <input
+                    type="number"
+                    id="landedCost"
+                    required
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    placeholder="12.50"
+                    value={formData.fullData.deeperKpis.landedCost}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: { ...prev.fullData.deeperKpis, landedCost: e.target.value }
+                      }
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="fbaFees" className="block text-sm font-medium text-gray-700 mb-2">
+                    FBA Fees *
+                  </label>
+                  <input
+                    type="number"
+                    id="fbaFees"
+                    required
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    placeholder="4.50"
+                    value={formData.fullData.deeperKpis.fbaFees}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: { ...prev.fullData.deeperKpis, fbaFees: e.target.value }
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="averageBsrMovement" className="block text-sm font-medium text-gray-700 mb-2">
+                    Average BSR Movement *
                   </label>
                   <select
-                    id="fullData.detailedKpis.paybackPeriod"
-                    name="fullData.detailedKpis.paybackPeriod"
+                    id="averageBsrMovement"
+                    required
                     className="input"
-                    value={formData.fullData.detailedKpis.paybackPeriod}
-                    onChange={handleChange}
+                    value={formData.fullData.deeperKpis.averageBsrMovement}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: { ...prev.fullData.deeperKpis, averageBsrMovement: e.target.value as any }
+                      }
+                    }))}
                   >
-                    {paybackPeriods.map((period) => (
-                      <option key={period} value={period}>
-                        {period}
+                    {bsrMovementOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="ppcCpc" className="block text-sm font-medium text-gray-700 mb-2">
+                    PPC CPC ($)
+                  </label>
+                  <input
+                    type="number"
+                    id="ppcCpc"
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    placeholder="1.25"
+                    value={formData.fullData.deeperKpis.ppcLandscape.cpc}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: {
+                          ...prev.fullData.deeperKpis,
+                          ppcLandscape: { ...prev.fullData.deeperKpis.ppcLandscape, cpc: e.target.value }
+                        }
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="ppcBudget" className="block text-sm font-medium text-gray-700 mb-2">
+                    PPC Budget ($)
+                  </label>
+                  <input
+                    type="number"
+                    id="ppcBudget"
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    placeholder="500"
+                    value={formData.fullData.deeperKpis.ppcLandscape.budget}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        deeperKpis: {
+                          ...prev.fullData.deeperKpis,
+                          ppcLandscape: { ...prev.fullData.deeperKpis.ppcLandscape, budget: e.target.value }
+                        }
+                      }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profitability Breakdown Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Profitability Breakdown Section</h2>
+              <p className="card-description">
+                Analysis of profitability and differentiation opportunities.
+              </p>
+            </div>
+            <div className="card-content space-y-6">
+              <div>
+                <label htmlFor="bundlingIdeas" className="block text-sm font-medium text-gray-700 mb-2">
+                  Bundling Ideas *
+                </label>
+                <textarea
+                  id="bundlingIdeas"
+                  required
+                  rows={4}
+                  className="input"
+                  placeholder="Describe potential product bundles and cross-selling opportunities..."
+                  value={formData.fullData.profitabilityBreakdown.bundlingIdeas}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      profitabilityBreakdown: { ...prev.fullData.profitabilityBreakdown, bundlingIdeas: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="discountOffersTemplates" className="block text-sm font-medium text-gray-700 mb-2">
+                  Discount Offers Templates *
+                </label>
+                <textarea
+                  id="discountOffersTemplates"
+                  required
+                  rows={4}
+                  className="input"
+                  placeholder="Provide discount strategies and promotional templates..."
+                  value={formData.fullData.profitabilityBreakdown.discountOffersTemplates}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      profitabilityBreakdown: { ...prev.fullData.profitabilityBreakdown, discountOffersTemplates: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="customerPainPoints" className="block text-sm font-medium text-gray-700 mb-2">
+                  Customer Pain Points
+                </label>
+                <textarea
+                  id="customerPainPoints"
+                  rows={3}
+                  className="input"
+                  placeholder="Identify common customer complaints and pain points..."
+                  value={formData.fullData.profitabilityBreakdown.customerPainPoints}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      profitabilityBreakdown: { ...prev.fullData.profitabilityBreakdown, customerPainPoints: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="materialUpgrades" className="block text-sm font-medium text-gray-700 mb-2">
+                  Material Upgrades
+                </label>
+                <textarea
+                  id="materialUpgrades"
+                  rows={3}
+                  className="input"
+                  placeholder="Suggest material improvements and premium options..."
+                  value={formData.fullData.profitabilityBreakdown.materialUpgrades}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      profitabilityBreakdown: { ...prev.fullData.profitabilityBreakdown, materialUpgrades: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Differentiation Opportunities Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Differentiation Opportunities Section</h2>
+              <p className="card-description">
+                Supplier and launch feasibility information.
+              </p>
+            </div>
+            <div className="card-content space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="supplierRegion" className="block text-sm font-medium text-gray-700 mb-2">
+                    Supplier Region *
+                  </label>
+                  <select
+                    id="supplierRegion"
+                    required
+                    className="input"
+                    value={formData.fullData.differentiationOpportunities.supplierRegion}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        differentiationOpportunities: { ...prev.fullData.differentiationOpportunities, supplierRegion: e.target.value as any }
+                      }
+                    }))}
+                  >
+                    {supplierRegions.map((region) => (
+                      <option key={region} value={region}>
+                        {region}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label htmlFor="fullData.detailedKpis.marketSize" className="block text-sm font-medium text-gray-700 mb-2">
-                    Market Size
+                  <label htmlFor="moq" className="block text-sm font-medium text-gray-700 mb-2">
+                    MOQ (Minimum Order Quantity) *
+                  </label>
+                  <input
+                    type="number"
+                    id="moq"
+                    required
+                    min="1"
+                    className="input"
+                    placeholder="500"
+                    value={formData.fullData.differentiationOpportunities.moq}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        differentiationOpportunities: { ...prev.fullData.differentiationOpportunities, moq: e.target.value }
+                      }
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="deliveryTime" className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Time *
                   </label>
                   <select
-                    id="fullData.detailedKpis.marketSize"
-                    name="fullData.detailedKpis.marketSize"
+                    id="deliveryTime"
+                    required
                     className="input"
-                    value={formData.fullData.detailedKpis.marketSize}
-                    onChange={handleChange}
+                    value={formData.fullData.differentiationOpportunities.deliveryTime}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        differentiationOpportunities: { ...prev.fullData.differentiationOpportunities, deliveryTime: e.target.value as any }
+                      }
+                    }))}
                   >
-                    {marketSizes.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
+                    {deliveryTimeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="launchComplexity" className="block text-sm font-medium text-gray-700 mb-2">
+                    Launch Complexity *
+                  </label>
+                  <select
+                    id="launchComplexity"
+                    required
+                    className="input"
+                    value={formData.fullData.differentiationOpportunities.launchComplexity}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        differentiationOpportunities: { ...prev.fullData.differentiationOpportunities, launchComplexity: e.target.value as any }
+                      }
+                    }))}
+                  >
+                    {launchComplexityOptions.map((complexity) => (
+                      <option key={complexity} value={complexity}>
+                        {complexity}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Product Information Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Product Information Section</h2>
+              <p className="card-description">
+                Premium product details (hidden from preview, visible only to purchasers).
+              </p>
+            </div>
+            <div className="card-content space-y-6">
+              <div>
+                <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Name
+                </label>
+                <input
+                  type="text"
+                  id="productName"
+                  className="input"
+                  placeholder="Enter the actual product name..."
+                  value={formData.fullData.productInformation.productName}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      productInformation: { ...prev.fullData.productInformation, productName: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
 
               <div>
-                <label htmlFor="fullData.sourcingStrategy" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="asin" className="block text-sm font-medium text-gray-700 mb-2">
+                  ASIN
+                </label>
+                <input
+                  type="text"
+                  id="asin"
+                  className="input"
+                  placeholder="B08XXXXXXX"
+                  value={formData.fullData.productInformation.asin}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      productInformation: { ...prev.fullData.productInformation, asin: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="supplierLink" className="block text-sm font-medium text-gray-700 mb-2">
+                  Supplier Link
+                </label>
+                <input
+                  type="url"
+                  id="supplierLink"
+                  className="input"
+                  placeholder="https://supplier.example.com/product"
+                  value={formData.fullData.productInformation.supplierLink}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: {
+                      ...prev.fullData,
+                      productInformation: { ...prev.fullData.productInformation, supplierLink: e.target.value }
+                    }
+                  }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="productKeywords" className="block text-sm font-medium text-gray-700 mb-2">
+                  Keywords
+                </label>
+                <input
+                  type="text"
+                  id="productKeywords"
+                  className="input"
+                  placeholder="Enter keywords separated by commas..."
+                  value={formData.fullData.productInformation.keywords.join(', ')}
+                  onChange={(e) => {
+                    const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                    setFormData(prev => ({
+                      ...prev,
+                      fullData: {
+                        ...prev.fullData,
+                        productInformation: { ...prev.fullData.productInformation, keywords }
+                      }
+                    }));
+                  }}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Separate multiple keywords with commas
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sourcing Strategy Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Sourcing Strategy</h2>
+              <p className="card-description">
+                Detailed sourcing strategy and supplier information (visible only to purchasers).
+              </p>
+            </div>
+            <div className="card-content">
+              <div>
+                <label htmlFor="sourcingStrategy" className="block text-sm font-medium text-gray-700 mb-2">
                   Sourcing Strategy *
-                  <span className="text-xs text-gray-500 ml-2">
-                    ({formData.fullData.sourcingStrategy.length}/{VALIDATION.DESCRIPTION_MAX_LENGTH} characters, minimum {VALIDATION.DESCRIPTION_MIN_LENGTH})
-                  </span>
                 </label>
                 <textarea
-                  id="fullData.sourcingStrategy"
-                  name="fullData.sourcingStrategy"
+                  id="sourcingStrategy"
                   required
-                  rows={8}
-                  className={`input ${errors['fullData.sourcingStrategy'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Describe your sourcing strategy, suppliers, and procurement process. Include details about supplier research, cost analysis, quality control measures, and procurement processes. This should be comprehensive and provide real value to buyers..."
-                  value={formData.fullData.sourcingStrategy}
-                  onChange={handleChange}
-                />
-                {errors['fullData.sourcingStrategy'] && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                    <span className="text-red-500">⚠️</span>
-                    {errors['fullData.sourcingStrategy']}
-                  </p>
-                )}
-                <div className="mt-2 text-xs text-gray-500">
-                  💡 <strong>Tip:</strong> Include supplier contacts, cost breakdowns, quality standards, and contingency plans. The more detailed, the more valuable to buyers.
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="fullData.launchPlan" className="block text-sm font-medium text-gray-700 mb-2">
-                  Launch Plan *
-                  <span className="text-xs text-gray-500 ml-2">
-                    ({formData.fullData.launchPlan.length}/{VALIDATION.DESCRIPTION_MAX_LENGTH} characters, minimum {VALIDATION.DESCRIPTION_MIN_LENGTH})
-                  </span>
-                </label>
-                <textarea
-                  id="fullData.launchPlan"
-                  name="fullData.launchPlan"
-                  required
-                  rows={8}
-                  className={`input ${errors['fullData.launchPlan'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Provide a detailed step-by-step launch plan. Include pre-launch activities, marketing strategies, distribution channels, customer acquisition tactics, and post-launch optimization. This should be actionable and comprehensive..."
-                  value={formData.fullData.launchPlan}
-                  onChange={handleChange}
-                />
-                {errors['fullData.launchPlan'] && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                    <span className="text-red-500">⚠️</span>
-                    {errors['fullData.launchPlan']}
-                  </p>
-                )}
-                <div className="mt-2 text-xs text-gray-500">
-                  💡 <strong>Tip:</strong> Include timelines, budgets, marketing channels, target audiences, and success metrics. Make it actionable for buyers.
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="fullData.additionalNotes" className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Notes
-                  <span className="text-xs text-gray-500 ml-2">
-                    ({formData.fullData.additionalNotes.length}/{VALIDATION.DESCRIPTION_MAX_LENGTH} characters, optional)
-                  </span>
-                </label>
-                <textarea
-                  id="fullData.additionalNotes"
-                  name="fullData.additionalNotes"
                   rows={6}
-                  className={`input ${errors['fullData.additionalNotes'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Any additional insights, tips, considerations, market trends, competitive analysis, or recommendations for success..."
-                  value={formData.fullData.additionalNotes}
-                  onChange={handleChange}
+                  className="input"
+                  placeholder="Describe your sourcing strategy, supplier selection criteria, quality control measures, and any special requirements..."
+                  value={formData.fullData.sourcingStrategy}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: { ...prev.fullData, sourcingStrategy: e.target.value }
+                  }))}
                 />
-                {errors['fullData.additionalNotes'] && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                    <span className="text-red-500">⚠️</span>
-                    {errors['fullData.additionalNotes']}
-                  </p>
-                )}
-                <div className="mt-2 text-xs text-gray-500">
-                  💡 <strong>Optional:</strong> Add market insights, competitive analysis, potential challenges, or any other valuable information for buyers.
-                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Launch Plan Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Launch Plan</h2>
+              <p className="card-description">
+                Step-by-step launch strategy and timeline (visible only to purchasers).
+              </p>
+            </div>
+            <div className="card-content">
+              <div>
+                <label htmlFor="launchPlan" className="block text-sm font-medium text-gray-700 mb-2">
+                  Launch Plan *
+                </label>
+                <textarea
+                  id="launchPlan"
+                  required
+                  rows={6}
+                  className="input"
+                  placeholder="Provide a detailed launch plan including timeline, marketing strategy, inventory management, and key milestones..."
+                  value={formData.fullData.launchPlan}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: { ...prev.fullData, launchPlan: e.target.value }
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Notes Section */}
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Additional Notes</h2>
+              <p className="card-description">
+                Any additional insights, warnings, or recommendations (visible only to purchasers).
+              </p>
+            </div>
+            <div className="card-content">
+              <div>
+                <label htmlFor="additionalNotes" className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional Notes
+                </label>
+                <textarea
+                  id="additionalNotes"
+                  rows={4}
+                  className="input"
+                  placeholder="Add any additional insights, market warnings, seasonal considerations, or other important notes..."
+                  value={formData.fullData.additionalNotes}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    fullData: { ...prev.fullData, additionalNotes: e.target.value }
+                  }))}
+                />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="btn btn-outline"
-            >
-              Cancel
-            </button>
-            
-            <div className="flex items-center gap-4">
-              <button
-                type="submit"
-                disabled={isLoading || Object.keys(errors).length > 0}
-                className={`btn ${Object.keys(errors).length > 0 ? 'btn-disabled' : 'btn-primary'}`}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="spinner w-4 h-4 mr-2" />
-                    Updating...
-                  </>
-                ) : Object.keys(errors).length > 0 ? (
-                  <>
-                    <span className="text-red-500 mr-2">⚠️</span>
-                    Fix Errors to Continue
-                  </>
-                ) : (
-                  <>
+          <div className="card">
+            <div className="card-content">
+              <div className="flex items-center justify-between pt-6 border-t">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, status: 'draft' }));
+                      handleSubmit(new Event('submit') as any);
+                    }}
+                    disabled={isLoading}
+                  >
                     <Save className="h-4 w-4 mr-2" />
-                    Update Product
-                  </>
-                )}
-              </button>
+                    Save as Draft
+                  </button>
+                  
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Update Product
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </form>

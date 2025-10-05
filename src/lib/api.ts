@@ -17,31 +17,70 @@ export interface Product {
   price: number;
   currency: string;
   previewData: {
-    kpiSummary: {
-      roiPercentage: number;
-      estimatedCost: number;
-      revenueForecast: number;
-    };
+    // Product Cards Section (Visible to All)
+    productCategory: string;
+    subCategory: string;
+    estimatedMonthlySales: '0-100' | '100-500' | '500-1000' | '1000-5000' | '5000+';
+    estimatedMonthlyRevenue: '$0-$1K' | '$1K-$5K' | '$5K-$10K' | '$10K-$50K' | '$50K+';
+    averageSellingPrice: number;
+    competitionLevel: 'Low' | 'Medium' | 'High' | 'Very High';
+    searchVolumeBracket: 'Low (0-1K)' | 'Medium (1K-10K)' | 'High (10K-100K)' | 'Very High (100K+)';
+    estimatedMargin: number;
+    fbaFeesCategory: 'Low' | 'Medium' | 'High';
+    seasonality: 'Year-round' | 'Seasonal' | 'Holiday-specific' | 'Trend-based';
+    confidenceScore: number;
+    
+    // Hidden fields (not shown in preview)
+    productName?: string;
+    keywords?: string[];
+    asin?: string;
+    supplierInformation?: string;
   };
   fullData?: {
-    detailedAnalysis: any;
-    sourcingStrategy: any;
-    marketResearch: any;
-    competitorAnalysis: any;
-    detailedKpis: {
-      profitMargin: number;
-      paybackPeriod: number;
-      breakEvenPoint: number;
-      marketSize: number;
-      competitionLevel: number;
+    // Deeper KPIs Section
+    deeperKpis: {
+      estimatedMonthlySales: '0-100' | '100-500' | '500-1000' | '1000-5000' | '5000+';
+      demandTrendChart?: string;
+      competitorReviewDistribution?: string;
+      averageBsrMovement: 'Stable' | 'Improving' | 'Declining' | 'Volatile';
+      ppcLandscape?: {
+        cpc: number;
+        budget: number;
+      };
+      targetPricePoint: number;
+      landedCost: number;
+      fbaFees: number;
+      netMarginBreakdown?: string;
     };
-    launchPlan: string;
-    marketingStrategy: string;
-    riskAssessment: string;
-    supplierContacts: any[];
-    productImages: string[];
-    legalConsiderations: string;
-    additionalNotes: string;
+    
+    // Profitability Breakdown Section
+    profitabilityBreakdown: {
+      customerPainPoints?: string;
+      bundlingIdeas: string;
+      discountOffersTemplates: string;
+      materialUpgrades?: string;
+    };
+    
+    // Differentiation Opportunities Section
+    differentiationOpportunities: {
+      supplierRegion: 'China' | 'India' | 'Vietnam' | 'Thailand' | 'Mexico' | 'USA' | 'Europe' | 'Other';
+      moq: number;
+      deliveryTime: '1-2 weeks' | '2-4 weeks' | '1-2 months' | '2-3 months' | '3+ months';
+      launchComplexity: 'Low' | 'Medium' | 'High' | 'Very High';
+    };
+    
+    // Product Information Section (Hidden fields)
+    productInformation?: {
+      productName?: string;
+      keywords?: string[];
+      asin?: string;
+      supplierLink?: string;
+    };
+    
+    // Legacy fields for backward compatibility
+    sourcingStrategy?: string;
+    launchPlan?: string;
+    additionalNotes?: string;
   };
   sellerId: {
     _id: string;
@@ -91,8 +130,13 @@ export interface ProductFilters {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
-  minRoi?: number;
-  maxRoi?: number;
+  minMargin?: number;
+  maxMargin?: number;
+  competitionLevel?: 'Low' | 'Medium' | 'High' | 'Very High';
+  searchVolumeBracket?: 'Low (0-1K)' | 'Medium (1K-10K)' | 'High (10K-100K)' | 'Very High (100K+)';
+  estimatedMonthlySales?: '0-100' | '100-500' | '500-1000' | '1000-5000' | '5000+';
+  supplierRegion?: 'China' | 'India' | 'Vietnam' | 'Thailand' | 'Mexico' | 'USA' | 'Europe' | 'Other';
+  launchComplexity?: 'Low' | 'Medium' | 'High' | 'Very High';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -179,6 +223,10 @@ class ApiClient {
     return this.request<{ product: Product }>(`/products/${id}`);
   }
 
+  async getFullProductDetails(id: string): Promise<ApiResponse<{ product: Product }>> {
+    return this.request<{ product: Product }>(`/products/${id}/full`);
+  }
+
   async searchProducts(query: string, filters: ProductFilters = {}): Promise<ApiResponse<PaginatedResponse<Product>>> {
     const params = new URLSearchParams({ q: query });
     
@@ -210,7 +258,7 @@ class ApiClient {
     uid: string;
     name: string;
     email: string;
-    role: 'Buyer' | 'Seller';
+    role: 'buyer' | 'seller';
     emailVerified: boolean;
     profile?: any;
   }): Promise<ApiResponse<{ user: any }>> {
@@ -226,7 +274,7 @@ class ApiClient {
     email: string;
     password: string;
     confirmPassword: string;
-    role: 'Buyer' | 'Seller';
+    role: 'buyer' | 'seller';
   }): Promise<ApiResponse<{ user: any; emailSent: boolean }>> {
     // Convert role to lowercase for backend compatibility
     const backendData = {
@@ -252,11 +300,11 @@ class ApiClient {
     });
   }
 
-  async completeRegistration(role: 'Buyer' | 'Seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
+  async completeRegistration(role: 'buyer' | 'seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
     // This endpoint doesn't exist in backend, we'll handle role selection differently
     return this.request<{ user: any; token: string }>('/auth/profile', {
       method: 'PUT',
-      body: JSON.stringify({ role: role.toLowerCase(), ...profileData }),
+      body: JSON.stringify({ role, ...profileData }),
     });
   }
 
@@ -282,13 +330,13 @@ class ApiClient {
   }
 
   // Auth API - Firebase authentication
-  async registerFirebase(firebaseUser: any, role: 'Buyer' | 'Seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
+  async registerFirebase(firebaseUser: any, role: 'buyer' | 'seller', profileData?: any): Promise<ApiResponse<{ user: any; token: string }>> {
     // Get the Firebase ID token
     const idToken = await firebaseUser.getIdToken();
     
     return this.request<{ user: any; token: string }>('/auth/google', {
       method: 'POST',
-      body: JSON.stringify({ idToken, role: role.toLowerCase(), profile: profileData }),
+      body: JSON.stringify({ idToken, role, profile: profileData }),
     });
   }
 
@@ -314,7 +362,7 @@ class ApiClient {
     name: string;
     email: string;
     password: string;
-    role: 'Buyer' | 'Seller';
+    role: 'buyer' | 'seller';
     profile?: any;
   }): Promise<ApiResponse<{ user: any; token: string }>> {
     return this.request<{ user: any; token: string }>('/auth/register', {

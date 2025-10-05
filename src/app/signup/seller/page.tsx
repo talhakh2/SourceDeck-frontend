@@ -33,7 +33,7 @@ export default function SellerSignupPage() {
     setValidationErrors([]);
 
     try {
-      const result = await registerWithGoogle('Seller', {
+      const result = await registerWithGoogle('seller', {
         company: formData.company,
         bio: formData.bio,
         location: formData.location,
@@ -75,7 +75,7 @@ export default function SellerSignupPage() {
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        role: 'Seller'
+        role: 'seller'
       });
 
       if (result.success) {

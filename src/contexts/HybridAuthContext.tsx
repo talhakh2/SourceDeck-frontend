@@ -107,7 +107,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
    * Listens to Firebase auth state changes and checks for existing sessions
    */
   useEffect(() => {
+    let isMounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return;
+      
       console.log('Firebase auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
       if (firebaseUser) {
         console.log('Firebase user:', firebaseUser.email, firebaseUser.uid);
@@ -128,11 +132,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
             console.log('Checking existing user in backend...');
             const response = await apiClient.getCurrentUser();
             console.log('getCurrentUser response:', response);
-            if (response.success && response.data) {
+            if (response.success && response.data && isMounted) {
               // Existing user - set user data
               console.log('Existing user found:', response.data.user);
               setUser(response.data.user);
-            } else {
+            } else if (isMounted) {
               // New user - don't set user here, let register/login methods handle it
               console.log('New user (not found in backend)');
               setUser(null);
@@ -140,7 +144,9 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
           } catch (error) {
             // User not found - this is expected for new users
             console.log('Error checking user in backend:', error);
-            setUser(null);
+            if (isMounted) {
+              setUser(null);
+            }
           }
         }
       } else {
@@ -149,11 +155,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           try {
             const response = await apiClient.getCurrentUser();
-            if (response.success && response.data) {
+            if (response.success && response.data && isMounted) {
               setUser(response.data.user);
               setAuthType('manual');
               setIsEmailVerified(response.data.user.emailVerified);
-            } else {
+            } else if (isMounted) {
               // Invalid token, remove it
               localStorage.removeItem('authToken');
               setUser(null);
@@ -162,10 +168,12 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
           } catch (error) {
             // Invalid token, remove it
             localStorage.removeItem('authToken');
-            setUser(null);
-            setAuthType(null);
+            if (isMounted) {
+              setUser(null);
+              setAuthType(null);
+            }
           }
-        } else {
+        } else if (isMounted) {
           setFirebaseUser(null);
           setUser(null);
           setIsEmailVerified(false);
@@ -174,11 +182,30 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         hasCheckedBackendRef.current = false;
         lastFirebaseUidRef.current = null;
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
+
+  /**
+   * Handle redirects based on user role after authentication
+   */
+  useEffect(() => {
+    if (user && !isLoading) {
+      const currentPath = window.location.pathname;
+      
+      // Redirect sellers to analytics after login
+      if (user.role === 'seller' && currentPath === '/dashboard/seller') {
+        router.push('/analytics');
+      }
+    }
+  }, [user, isLoading, router]);
 
   /**
    * Manual registration with email verification
@@ -230,7 +257,7 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
         setAuthType('manual');
         setIsEmailVerified(response.data.user.emailVerified);
         
-        return { success: true, message: 'Successfully signed in', user: response.data.user };
+        return { success: true, message: 'Successfully signed in' };
       } else {
         return { 
           success: false, 
@@ -256,8 +283,8 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       
       if (response.success) {
         // Store JWT token if provided (for manual signup users)
-        if (response.data?.token) {
-          localStorage.setItem('authToken', response.data.token);
+        if ((response.data as any)?.token) {
+          localStorage.setItem('authToken', (response.data as any).token);
         }
         
         // Update user data
@@ -352,20 +379,19 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       const response = await apiClient.loginFirebase(firebaseUser);
       
       if (response.success && response.data) {
-        if (response.data.exists) {
+        if ((response.data as any)?.exists) {
           // Existing user - set user data and store token if provided
-          if (response.data.token) {
-            localStorage.setItem('authToken', response.data.token);
+          if ((response.data as any)?.token) {
+            localStorage.setItem('authToken', (response.data as any).token);
           }
           setUser(response.data.user);
           setAuthType('manual'); // Use manual auth type for unified JWT system
-          return { success: true, message: 'Successfully signed in with Google', user: response.data.user };
+          return { success: true, message: 'Successfully signed in with Google' };
         } else {
           // New user - return Google info for role selection
           return { 
             success: true, 
-            message: 'New user - role selection needed',
-            googleUser: response.data.user
+            message: 'New user - role selection needed'
           };
         }
       } else {

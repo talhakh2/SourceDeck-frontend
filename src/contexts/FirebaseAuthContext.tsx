@@ -40,7 +40,7 @@ interface User {
   uid: string;
   name: string;
   email: string;
-  role: 'Buyer' | 'Seller';
+      role: 'buyer' | 'seller';
   emailVerified: boolean;
   profile?: {
     company?: string;
@@ -64,7 +64,7 @@ interface FirebaseAuthContextType {
   isEmailVerified: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; errors?: any[]; message?: string }>;
-  completeUserSetup: (role: 'Buyer' | 'Seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
+  completeUserSetup: (role: 'buyer' | 'seller', profileData?: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
   register: (userData: { name: string; email: string; password: string }) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
   logout: () => Promise<void>;
   updateUser: (userData: any) => Promise<{ success: boolean; errors?: any[]; message?: string }>;
@@ -142,7 +142,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Get user data from backend or create new user
    */
-  const getOrCreateUser = async (firebaseUser: FirebaseUser, roleData?: { role: 'Buyer' | 'Seller', profile?: any }): Promise<User> => {
+  const getOrCreateUser = async (firebaseUser: FirebaseUser, roleData?: { role: 'buyer' | 'seller', profile?: any }): Promise<User> => {
     try {
       // Try to get existing user
       const response = await apiClient.getCurrentUser();
@@ -158,7 +158,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       uid: firebaseUser.uid,
       name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
       email: firebaseUser.email || '',
-      role: roleData?.role || 'Buyer' as const,
+      role: roleData?.role || 'buyer' as const,
       emailVerified: firebaseUser.emailVerified,
       profile: {
         avatar: firebaseUser.photoURL || undefined,
@@ -236,7 +236,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Authenticate user with Google
    */
-  const loginWithGoogle = async (role?: 'Buyer' | 'Seller'): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
+  const loginWithGoogle = async (role?: 'buyer' | 'seller'): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
@@ -294,7 +294,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   /**
    * Complete user setup with role selection (for new Google users)
    */
-  const completeUserSetup = async (role: 'Buyer' | 'Seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
+  const completeUserSetup = async (role: 'buyer' | 'seller', profileData?: any): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     if (!firebaseUser) {
       return { success: false, message: 'No authenticated user found' };
     }
@@ -319,7 +319,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     name: string; 
     email: string; 
     password: string; 
-    role?: 'Buyer' | 'Seller';
+    role?: 'buyer' | 'seller';
     profile?: any;
   }): Promise<{ success: boolean; errors?: any[]; message?: string }> => {
     try {

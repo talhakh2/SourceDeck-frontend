@@ -8,6 +8,7 @@ import { CartProvider } from '@/contexts/CartContext';
 import { PurchaseProvider } from '@/contexts/PurchaseContext';
 import { AppProvider } from '@/contexts/AppContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { MiniCart } from '@/components/cart/MiniCart';
 
 interface ProvidersProps {
@@ -36,15 +37,17 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <HybridAuthProvider>
-          <PurchaseProvider>
-            <CartProvider>
-              <AppProvider>
-                {children}
-                <MiniCart />
-                {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
-              </AppProvider>
-            </CartProvider>
-          </PurchaseProvider>
+          <NotificationProvider>
+            <PurchaseProvider>
+              <CartProvider>
+                <AppProvider>
+                  {children}
+                  <MiniCart />
+                  {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+                </AppProvider>
+              </CartProvider>
+            </PurchaseProvider>
+          </NotificationProvider>
         </HybridAuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

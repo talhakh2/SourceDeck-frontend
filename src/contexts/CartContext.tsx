@@ -123,7 +123,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error loading database cart:', error);
-      console.error('Error details:', error.response || error.message);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
       // Fallback to local cart
       loadLocalCart();
     } finally {
@@ -133,6 +133,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Initialize cart on mount and user changes - FIXED to prevent infinite loops
   useEffect(() => {
+    let isMounted = true;
     const currentUserId = user?._id || null;
     
     // Only initialize if user changed or first time
@@ -140,21 +141,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lastUserIdRef.current = currentUserId;
       hasInitializedRef.current = true;
       
+      // Only load cart for buyers, not sellers
       if (user && user.role === 'buyer') {
-        loadDatabaseCart();
-      } else {
+        loadDatabaseCart().finally(() => {
+          if (isMounted) setIsLoaded(true);
+        });
+      } else if (!user) {
+        // Only load local cart for guest users
         loadLocalCart();
+        if (isMounted) setIsLoaded(true);
+      } else {
+        // For sellers, just mark as loaded without loading cart
+        if (isMounted) setIsLoaded(true);
       }
-      setIsLoaded(true);
     }
-  }, [user?._id, user?.role]); // Only depend on user ID and role
 
-  // Save to localStorage whenever items change (for guest users) - FIXED
+    return () => {
+      isMounted = false;
+    };
+  }, [user?._id, user?.role, loadDatabaseCart, loadLocalCart]); // Include dependencies
+
+  // Save to localStorage whenever items change (for guest users only) - FIXED
   useEffect(() => {
-    if (isLoaded && (!user || user.role !== 'buyer')) {
+    if (isLoaded && !user) {
+      // Only save to localStorage for guest users, not for sellers
       saveLocalCart(itemsRef.current);
     }
-  }, [items, isLoaded, user?.role, saveLocalCart]); // Removed user dependency
+  }, [items, isLoaded, user, saveLocalCart]);
 
   // Listen for cart updates from other tabs
   useEffect(() => {
@@ -237,7 +250,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Database cart will be updated, no need to update local state
       } catch (error) {
         console.error('Error adding item to database cart:', error);
-        console.error('Error details:', error.response || error.message);
+        console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
         toast.error('Failed to add item to cart. Please try again.');
         // Revert local state
         setItems(itemsRef.current);
@@ -246,13 +259,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     toast.success(`Added ${product.title} to cart`, {
-      duration: 2000,
+      duration: 1500,
       icon: '✅',
     });
     
-    // Show cart briefly when item is added
-    setIsOpen(true);
-    setTimeout(() => setIsOpen(false), 2000);
+    // Show cart briefly when item is added (only for buyers)
+    if (user && user.role === 'buyer') {
+      setIsOpen(true);
+      setTimeout(() => setIsOpen(false), 1500);
+    }
     
     // Broadcast update
     broadcastCartUpdate(newItems);
@@ -280,7 +295,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     toast.success(`Removed ${itemToRemove.product.title} from cart`, {
-      duration: 2000,
+      duration: 1500,
       icon: '🗑️',
     });
     
@@ -308,7 +323,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     toast.success('Cart cleared successfully', {
-      duration: 2000,
+      duration: 1500,
       icon: '🧹',
     });
     
@@ -339,6 +354,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const mergeGuestCart = useCallback(() => {
+    // Only merge cart for buyers, not sellers
+    if (!user || user.role !== 'buyer') {
+      return;
+    }
+
     try {
       // Find all guest cart keys
       const guestKeys = Object.keys(localStorage).filter(key => key.startsWith('cart_guest_'));
@@ -374,20 +394,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(mergedItems);
         itemsRef.current = mergedItems;
         
-        // If user is authenticated, sync merged cart to database
-        if (user && user.role === 'buyer') {
-          const itemsToSync = mergedItems.map(item => ({
-            productId: item.product._id,
-            addedAt: item.addedAt
-          }));
-          
-          apiClient.syncCart(itemsToSync).catch(error => {
-            console.error('Error syncing merged cart:', error);
-          });
-        }
+        // Sync merged cart to database for buyers only
+        const itemsToSync = mergedItems.map(item => ({
+          productId: item.product._id,
+          addedAt: item.addedAt
+        }));
+        
+        apiClient.syncCart(itemsToSync).catch(error => {
+          console.error('Error syncing merged cart:', error);
+        });
         
         toast.success('Cart items merged successfully!', {
-          duration: 3000,
+          duration: 2000,
           icon: '🛒',
         });
       }

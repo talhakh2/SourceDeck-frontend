@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://sellables.com'),
   openGraph: {
     title: 'Sellables - E-Commerce Product Research Marketplace',
     description: 'A marketplace where Virtual Assistants (VAs) can sell researched e-commerce products to Business Owners (BOs).',
@@ -91,20 +91,21 @@ export default function RootLayout({
             <Toaster
               position="top-right"
               toastOptions={{
-                duration: 4000,
+                duration: 2000,
                 style: {
                   background: '#363636',
                   color: '#fff',
+                  fontSize: '14px',
                 },
                 success: {
-                  duration: 3000,
+                  duration: 1500,
                   iconTheme: {
                     primary: '#10b981',
                     secondary: '#fff',
                   },
                 },
                 error: {
-                  duration: 5000,
+                  duration: 3000,
                   iconTheme: {
                     primary: '#ef4444',
                     secondary: '#fff',

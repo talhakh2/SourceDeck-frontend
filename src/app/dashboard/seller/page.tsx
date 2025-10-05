@@ -7,6 +7,7 @@ import {
   Eye, 
   ShoppingCart, 
   TrendingUp, 
+  TrendingDown,
   DollarSign, 
   Edit, 
   Trash2,
@@ -38,6 +39,20 @@ interface ProductStats {
   totalSales: number;
   totalRevenue: number;
   averageRating: number;
+  // Growth metrics
+  revenueGrowth: number;
+  salesGrowth: number;
+  productsGrowth: number;
+  ratingGrowth: number;
+  // Time-based data
+  thisWeekRevenue: number;
+  lastWeekRevenue: number;
+  thisMonthRevenue: number;
+  lastMonthRevenue: number;
+  thisWeekSales: number;
+  lastWeekSales: number;
+  thisMonthProducts: number;
+  lastMonthProducts: number;
 }
 
 interface Sale {
@@ -63,13 +78,24 @@ export default function SellerDashboard() {
     totalViews: 0,
     totalSales: 0,
     totalRevenue: 0,
-    averageRating: 0
+    averageRating: 0,
+    revenueGrowth: 0,
+    salesGrowth: 0,
+    productsGrowth: 0,
+    ratingGrowth: 0,
+    thisWeekRevenue: 0,
+    lastWeekRevenue: 0,
+    thisMonthRevenue: 0,
+    lastMonthRevenue: 0,
+    thisWeekSales: 0,
+    lastWeekSales: 0,
+    thisMonthProducts: 0,
+    lastMonthProducts: 0
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
   
   // Confirmation modal hook
-  const { 
+  const {
     isOpen: isConfirmOpen, 
     title: confirmTitle, 
     description: confirmDescription, 
@@ -78,8 +104,8 @@ export default function SellerDashboard() {
     variant: confirmVariant, 
     loading: confirmLoading, 
     onConfirm: handleConfirm, 
-    onCancel: hideConfirmation,
-    showConfirmation
+    showConfirmation,
+    hideConfirmation
   } = useConfirmationModal();
 
   useEffect(() => {
@@ -102,19 +128,92 @@ export default function SellerDashboard() {
         setSales(salesResponse.data.data);
       }
 
-      // Calculate stats
-      const totalProducts = productsResponse.data?.data?.length || 0;
-      const totalViews = productsResponse.data?.data?.reduce((sum, p) => sum + (p.views || 0), 0) || 0;
-      const totalSales = salesResponse.data?.data?.length || 0;
-      const totalRevenue = salesResponse.data?.data?.reduce((sum, s) => sum + s.amount, 0) || 0;
-      const averageRating = productsResponse.data?.data?.reduce((sum, p) => sum + (p.rating?.average || 0), 0) / totalProducts || 0;
+      // Calculate dynamic stats
+      const allProducts = productsResponse.data?.data || [];
+      const allSales = salesResponse.data?.data || [];
+      
+      const totalProducts = allProducts.length;
+      const totalViews = allProducts.reduce((sum, p) => sum + (p.views || 0), 0);
+      const totalSales = allSales.length;
+      const totalRevenue = allSales.reduce((sum, s) => sum + s.amount, 0);
+      const averageRating = totalProducts > 0 
+        ? allProducts.reduce((sum, p) => sum + (p.rating?.average || 0), 0) / totalProducts 
+        : 0;
+
+      // Calculate time-based metrics
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+      // This week's revenue and sales
+      const thisWeekSales = allSales.filter(sale => new Date(sale.createdAt) >= oneWeekAgo);
+      const thisWeekRevenue = thisWeekSales.reduce((sum, s) => sum + s.amount, 0);
+
+      // Last week's revenue and sales
+      const lastWeekSales = allSales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate >= twoWeeksAgo && saleDate < oneWeekAgo;
+      });
+      const lastWeekRevenue = lastWeekSales.reduce((sum, s) => sum + s.amount, 0);
+
+      // This month's revenue
+      const thisMonthSales = allSales.filter(sale => new Date(sale.createdAt) >= oneMonthAgo);
+      const thisMonthRevenue = thisMonthSales.reduce((sum, s) => sum + s.amount, 0);
+
+      // Last month's revenue
+      const lastMonthSales = allSales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate >= twoMonthsAgo && saleDate < oneMonthAgo;
+      });
+      const lastMonthRevenue = lastMonthSales.reduce((sum, s) => sum + s.amount, 0);
+
+      // This month's products
+      const thisMonthProducts = allProducts.filter(product => 
+        new Date(product.createdAt) >= oneMonthAgo
+      ).length;
+
+      // Last month's products
+      const lastMonthProducts = allProducts.filter(product => {
+        const productDate = new Date(product.createdAt);
+        return productDate >= twoMonthsAgo && productDate < oneMonthAgo;
+      }).length;
+
+      // Calculate growth percentages
+      const revenueGrowth = lastWeekRevenue > 0 
+        ? Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100)
+        : thisWeekRevenue > 0 ? 100 : 0;
+
+      const salesGrowth = lastWeekSales.length > 0 
+        ? Math.round(((thisWeekSales.length - lastWeekSales.length) / lastWeekSales.length) * 100)
+        : thisWeekSales.length > 0 ? 100 : 0;
+
+      const productsGrowth = lastMonthProducts > 0 
+        ? Math.round(((thisMonthProducts - lastMonthProducts) / lastMonthProducts) * 100)
+        : thisMonthProducts > 0 ? 100 : 0;
+
+      // For rating growth, we'll use a simple calculation
+      const ratingGrowth = averageRating > 0 ? Math.round(averageRating * 10) / 10 : 0;
 
       setStats({
         totalProducts,
         totalViews,
         totalSales,
         totalRevenue,
-        averageRating: Math.round(averageRating * 10) / 10
+        averageRating: Math.round(averageRating * 10) / 10,
+        revenueGrowth,
+        salesGrowth,
+        productsGrowth,
+        ratingGrowth,
+        thisWeekRevenue,
+        lastWeekRevenue,
+        thisMonthRevenue,
+        lastMonthRevenue,
+        thisWeekSales: thisWeekSales.length,
+        lastWeekSales: lastWeekSales.length,
+        thisMonthProducts,
+        lastMonthProducts
       });
 
     } catch (error) {
@@ -173,18 +272,20 @@ export default function SellerDashboard() {
   }
 
   const dashboardActions = (
-    <Link href="/products/create">
-      <Button leftIcon={<Plus className="h-4 w-4" />}>
-        Create New Product
-      </Button>
-    </Link>
+    <div className="flex items-center gap-3">
+      <Link href="/products/create">
+        <Button leftIcon={<Plus className="h-4 w-4" />} variant="primary">
+          Create Product
+        </Button>
+      </Link>
+      <Link href="/analytics">
+        <Button variant="outline" leftIcon={<TrendingUp className="h-4 w-4" />}>
+          Analytics
+        </Button>
+      </Link>
+    </div>
   );
 
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'products', label: 'Products', count: products.length },
-    { id: 'sales', label: 'Sales', count: sales.length }
-  ];
 
   return (
     <ProtectedRoute requiredRole="seller">
@@ -196,186 +297,42 @@ export default function SellerDashboard() {
         />
 
         <DashboardContent>
-          <DashboardStatsGrid>
-            <StatsCard
-              title="Total Products"
-              value={stats.totalProducts}
-              icon={<Package className="h-6 w-6 text-primary-600" />}
-            />
-            <StatsCard
-              title="Total Views"
-              value={stats.totalViews.toLocaleString()}
-              icon={<Eye className="h-6 w-6 text-primary-600" />}
-            />
-            <StatsCard
-              title="Total Sales"
-              value={stats.totalSales}
-              icon={<ShoppingCart className="h-6 w-6 text-primary-600" />}
-            />
-            <StatsCard
-              title="Total Revenue"
-              value={formatCurrency(stats.totalRevenue)}
-              icon={<DollarSign className="h-6 w-6 text-primary-600" />}
-            />
-          </DashboardStatsGrid>
-
-          <DashboardTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Recent Products */}
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Recent Products</h3>
-                  <Link href="/products/create" className="btn btn-outline btn-sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add New
-                  </Link>
-                </div>
-                <div className="card-content">
-                  {products.length > 0 ? (
-                    <div className="space-y-4">
-                      {products.slice(0, 5).map((product) => (
-                        <div key={product._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{product.title}</h4>
-                            <p className="text-sm text-gray-600">{product.category}</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className={`badge ${getStatusBadge(product.status || 'draft')}`}>
-                              {product.status || 'draft'}
-                            </span>
-                            <span className="text-sm font-medium">{formatCurrency(product.price)}</span>
-                            <div className="flex items-center gap-2">
-                              <Eye className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">{product.views}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No products yet</h3>
-                      <p className="text-gray-600 mb-4">Start by creating your first product research listing.</p>
-                      <Link href="/products/create" className="btn btn-primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Your First Product
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Recent Sales */}
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Recent Sales</h3>
-                </div>
-                <div className="card-content">
-                  {sales.length > 0 ? (
-                    <div className="space-y-4">
-                      {sales.slice(0, 5).map((sale) => (
-                        <div key={sale._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{sale.productId.title}</h4>
-                            <p className="text-sm text-gray-600">Sold to {sale.buyerId.name}</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium">{formatCurrency(sale.amount)}</span>
-                            <span className="text-sm text-gray-600">{formatDate(sale.createdAt)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No sales yet</h3>
-                      <p className="text-gray-600">Your sales will appear here once buyers purchase your products.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'products' && (
+          <div className="space-y-6">
+            {/* Recent Products */}
             <div className="card">
               <div className="card-header">
-                <h3 className="card-title">My Products</h3>
-                <Link href="/products/create" className="btn btn-primary btn-sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Product
+                <h3 className="card-title">Recent Products</h3>
+                <Link href="/products" className="btn btn-outline btn-sm">
+                  View All
                 </Link>
               </div>
               <div className="card-content">
                 {products.length > 0 ? (
                   <div className="space-y-4">
-                    {products.map((product) => (
-                      <div key={product._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    {products.slice(0, 5).map((product) => (
+                      <div key={product._id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-gray-900">{product.title}</h4>
-                            <span className={`badge ${getStatusBadge(product.status || 'draft')}`}>
-                              {product.status || 'draft'}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{product.category}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
-                              {product.views} views
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <ShoppingCart className="h-4 w-4" />
-                              {product.purchaseCount} sales
-                            </div>
-                            {product.rating && (
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4" />
-                                {product.rating.average} ({product.rating.count})
-                              </div>
-                            )}
-                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{product.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{product.category}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
-                          <div className="flex items-center gap-1">
-                            <Link
-                              href={`/products/${product._id}`}
-                              className="btn btn-outline btn-sm"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                            <Link
-                              href={`/products/${product._id}/edit`}
-                              className="btn btn-outline btn-sm"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteProduct(product._id)}
-                              className="btn btn-outline btn-sm text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                        <div className="flex items-center gap-4">
+                          <span className={`badge ${getStatusBadge(product.status || 'draft')}`}>
+                            {product.status || 'draft'}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(product.price)}</span>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{product.views}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-medium text-gray-900 mb-2">No products yet</h3>
-                    <p className="text-gray-600 mb-6">Start by creating your first product research listing to begin selling.</p>
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No products yet</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">Start by creating your first product research listing.</p>
                     <Link href="/products/create" className="btn btn-primary">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Your First Product
@@ -384,47 +341,41 @@ export default function SellerDashboard() {
                 )}
               </div>
             </div>
-          )}
 
-          {activeTab === 'sales' && (
+            {/* Recent Sales */}
             <div className="card">
               <div className="card-header">
-                <h3 className="card-title">Sales History</h3>
+                <h3 className="card-title">Recent Sales</h3>
+                <Link href="/sales" className="btn btn-outline btn-sm">
+                  View All
+                </Link>
               </div>
               <div className="card-content">
                 {sales.length > 0 ? (
                   <div className="space-y-4">
-                    {sales.map((sale) => (
-                      <div key={sale._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    {sales.slice(0, 5).map((sale) => (
+                      <div key={sale._id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{sale.productId.title}</h4>
-                          <p className="text-sm text-gray-600">Sold to {sale.buyerId.name}</p>
-                          <p className="text-xs text-gray-500">{sale.buyerId.email}</p>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{sale.productId.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Sold to {sale.buyerId.name}</p>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-lg font-bold text-gray-900">{formatCurrency(sale.amount)}</span>
-                          <div className="text-right">
-                            <span className="text-sm text-gray-600">{formatDate(sale.createdAt)}</span>
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className={`badge ${sale.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                                {sale.status}
-                              </span>
-                            </div>
-                          </div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(sale.amount)}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{formatDate(sale.createdAt)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-medium text-gray-900 mb-2">No sales yet</h3>
-                    <p className="text-gray-600">Your sales will appear here once buyers purchase your products.</p>
+                  <div className="text-center py-8">
+                    <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No sales yet</h3>
+                    <p className="text-gray-600 dark:text-gray-300">Your sales will appear here once buyers purchase your products.</p>
                   </div>
                 )}
               </div>
             </div>
-          )}
+          </div>
         </DashboardContent>
         
         {/* Confirmation Modal */}

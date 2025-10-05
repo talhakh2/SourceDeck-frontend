@@ -24,6 +24,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Send to error reporting service in production
+    if (process.env.NODE_ENV === 'production') {
+      // Example: Send to Sentry, LogRocket, etc.
+      // errorReportingService.captureException(error, { extra: errorInfo });
+    }
   }
 
   private handleRetry = () => {

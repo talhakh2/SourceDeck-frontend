@@ -24,7 +24,7 @@ export default function CartPage() {
       return;
     }
     
-    if (user.role !== 'Buyer') {
+    if (user.role !== 'buyer') {
       toast.error('Only buyers can make purchases. Please switch to buyer account.');
       return;
     }
@@ -35,12 +35,12 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container-responsive py-16">
           <div className="text-center">
-            <ShoppingCart className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h1>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            <ShoppingCart className="h-24 w-24 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">Your Cart is Empty</h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
               Looks like you haven't added any product research to your cart yet. 
               Start exploring our marketplace to find valuable insights.
             </p>
@@ -58,7 +58,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container-responsive py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -70,8 +70,8 @@ export default function CartPage() {
             Continue Shopping
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Shopping Cart</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
               {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
             </p>
           </div>
@@ -86,18 +86,18 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Cart Items</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cart Items</h2>
               </div>
               
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {items.map((item) => (
                   <div key={item.product._id} className="p-6">
                     <div className="flex gap-4">
                         {/* Product Image Placeholder */}
-                        <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center">
-                          <span className="text-sm text-gray-500 font-medium">
+                        <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex-shrink-0 flex items-center justify-center">
+                          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                             {item.product.category?.charAt(0) || 'P'}
                           </span>
                         </div>
@@ -106,20 +106,20 @@ export default function CartPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
                               {item.product.title || 'Untitled Product'}
                             </h3>
-                            <p className="text-sm text-gray-500 mb-2">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                               {item.product.category || 'Uncategorized'}
                             </p>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span>ROI: {item.product.previewData?.kpiSummary?.roiPercentage || 0}%</span>
-                              <span>Est. Cost: {formatCurrency(item.product.previewData?.kpiSummary?.estimatedCost || 0)}</span>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+                              <span>Margin: {item.product.previewData?.estimatedMargin || 0}%</span>
+                              <span>Avg. Price: {formatCurrency(item.product.previewData?.averageSellingPrice || 0)}</span>
                             </div>
                           </div>
                           
                           <div className="text-right">
-                            <div className="text-lg font-bold text-gray-900 mb-2">
+                            <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
                               {formatCurrency(item.product.price || 0)}
                             </div>
                           </div>
@@ -145,25 +145,25 @@ export default function CartPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sticky top-8">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Order Summary</h2>
               
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
-                  <span className="font-medium">{formatCurrency(totalPrice)}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Platform Fee (5%)</span>
-                  <span className="font-medium">{formatCurrency(totalPrice * 0.05)}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Platform Fee (5%)</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(totalPrice * 0.05)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Processing Fee</span>
-                  <span className="font-medium">{formatCurrency(2.99)}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Processing Fee</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(2.99)}</span>
                 </div>
-                <div className="border-t border-gray-200 pt-3">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                   <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
+                    <span className="text-gray-900 dark:text-gray-100">Total</span>
                     <span className="text-primary-600">
                       {formatCurrency(totalPrice + (totalPrice * 0.05) + 2.99)}
                     </span>
@@ -191,8 +191,8 @@ export default function CartPage() {
               </button>
 
               {/* Security Badges */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                   <span>🔒 Secure Checkout</span>
                   <span>💳 Multiple Payment Options</span>
                   <span>✅ 30-Day Guarantee</span>

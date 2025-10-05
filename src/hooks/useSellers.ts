@@ -262,7 +262,8 @@ export function useSearchSellers(searchParams: {
     async () => {
       // This would call an actual API endpoint with search parameters
       // For now, we'll return filtered mock data
-      const { data: allSellers } = await useSellers().queryFn();
+      // For now, return empty array since we can't access mockSellers from here
+      const allSellers: Seller[] = [];
       
       if (!allSellers) return [];
 

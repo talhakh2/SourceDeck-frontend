@@ -39,20 +39,29 @@ interface Purchase {
   productId: {
     _id: string;
     title: string;
-    category: string;
     price: number;
+    images?: string[];
+    category?: string;
+    description?: string;
+    rating?: {
+      average: number;
+      count: number;
+    };
+    views?: number;
+    purchaseCount?: number;
+    status?: string;
     pdfUrl?: string;
   };
   sellerId: {
     _id: string;
     name: string;
-    profile: {
+    email: string;
+    profile?: {
       company?: string;
     };
   };
   amount: number;
-  status: string;
-  accessGranted: boolean;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
   createdAt: string;
   accessGrantedAt?: string;
 }
@@ -75,7 +84,6 @@ export default function BuyerDashboard() {
     averagePurchaseValue: 0
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     fetchData();
@@ -177,12 +185,6 @@ export default function BuyerDashboard() {
     </Link>
   );
 
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'purchases', label: 'My Purchases', count: purchases.length },
-    { id: 'research', label: 'Research Tools' }
-  ];
-
   return (
     <ProtectedRoute requiredRole="buyer">
       <Dashboard>
@@ -216,126 +218,29 @@ export default function BuyerDashboard() {
             />
           </DashboardStatsGrid>
 
-          <DashboardTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Recent Purchases */}
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Recent Purchases</h3>
-                  <Link href="/products" className="btn btn-outline btn-sm">
-                    <Package className="h-4 w-4 mr-2" />
-                    Browse More
-                  </Link>
-                </div>
-                <div className="card-content">
-                  {purchases.length > 0 ? (
-                    <div className="space-y-4">
-                      {purchases.slice(0, 5).map((purchase) => (
-                        <div key={purchase._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{purchase.productId.title}</h4>
-                            <p className="text-sm text-gray-600">by {purchase.sellerId.name}</p>
-                            {purchase.sellerId.profile?.company && (
-                              <p className="text-xs text-gray-500">{purchase.sellerId.profile.company}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(purchase.status)}
-                              <span className={`badge ${getStatusBadge(purchase.status)}`}>
-                                {purchase.status}
-                              </span>
-                            </div>
-                            <span className="text-sm font-medium">{formatCurrency(purchase.amount)}</span>
-                            <span className="text-sm text-gray-600">{formatDate(purchase.createdAt)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No purchases yet</h3>
-                      <p className="text-gray-600 mb-4">Start by browsing and purchasing product research.</p>
-                      <Link href="/products" className="btn btn-primary">
-                        <Package className="h-4 w-4 mr-2" />
-                        Browse Products
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="card">
-                  <div className="card-header">
-                    <h3 className="card-title">Purchase Status</h3>
-                  </div>
-                  <div className="card-content">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Completed</span>
-                        <span className="font-medium text-green-600">{stats.completedPurchases}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Pending</span>
-                        <span className="font-medium text-yellow-600">{stats.pendingPurchases}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card-header">
-                    <h3 className="card-title">Investment Summary</h3>
-                  </div>
-                  <div className="card-content">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Total Invested</span>
-                        <span className="font-medium">{formatCurrency(stats.totalSpent)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Average per Purchase</span>
-                        <span className="font-medium">{formatCurrency(stats.averagePurchaseValue)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'purchases' && (
+          {/* Dashboard Content */}
+          <div className="space-y-6">
+            {/* Recent Purchases */}
             <div className="card">
               <div className="card-header">
-                <h3 className="card-title">Purchase History</h3>
+                <h3 className="card-title">Recent Purchases</h3>
+                <Link href="/products" className="btn btn-outline btn-sm">
+                  <Package className="h-4 w-4 mr-2" />
+                  Browse More
+                </Link>
               </div>
               <div className="card-content">
                 {purchases.length > 0 ? (
                   <div className="space-y-4">
-                    {purchases.map((purchase) => (
-                      <div key={purchase._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    {purchases.slice(0, 5).map((purchase) => (
+                      <div key={purchase._id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-gray-900">{purchase.productId.title}</h4>
-                            <span className={`badge ${getStatusBadge(purchase.status)}`}>
-                              {purchase.status}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">by {purchase.sellerId.name}</p>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">{purchase.productId.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">by {purchase.sellerId.name}</p>
                           {purchase.sellerId.profile?.company && (
-                            <p className="text-xs text-gray-500 mb-2">{purchase.sellerId.profile.company}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{purchase.sellerId.profile.company}</p>
                           )}
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               Purchased {formatDate(purchase.createdAt)}
@@ -349,7 +254,7 @@ export default function BuyerDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className="text-lg font-bold text-gray-900">{formatCurrency(purchase.amount)}</span>
+                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(purchase.amount)}</span>
                           <div className="flex items-center gap-2">
                             <Link
                               href={`/products/${purchase.productId._id}`}
@@ -372,9 +277,9 @@ export default function BuyerDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-medium text-gray-900 mb-2">No purchases yet</h3>
-                    <p className="text-gray-600 mb-6">Start by browsing and purchasing product research to build your library.</p>
+                    <ShoppingCart className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">No purchases yet</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">Start by browsing and purchasing product research to build your library.</p>
                     <Link href="/products" className="btn btn-primary">
                       <Package className="h-4 w-4 mr-2" />
                       Browse Products
@@ -383,13 +288,82 @@ export default function BuyerDashboard() {
                 )}
               </div>
             </div>
-          )}
 
-          {activeTab === 'research' && (
+            {/* Purchase History */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">Purchase History</h3>
+              </div>
+              <div className="card-content">
+                {purchases.length > 0 ? (
+                  <div className="space-y-4">
+                    {purchases.map((purchase) => (
+                      <div key={purchase._id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{purchase.productId.title}</h4>
+                            <span className={`badge ${getStatusBadge(purchase.status)}`}>
+                              {purchase.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">by {purchase.sellerId.name}</p>
+                          {purchase.sellerId.profile?.company && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{purchase.sellerId.profile.company}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              Purchased {formatDate(purchase.createdAt)}
+                            </div>
+                            {purchase.accessGrantedAt && (
+                              <div className="flex items-center gap-1">
+                                <CheckCircle className="h-4 w-4" />
+                                Access granted {formatDate(purchase.accessGrantedAt)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(purchase.amount)}</span>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/products/${purchase.productId._id}`}
+                              className="btn btn-outline btn-sm"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                            {purchase.status === 'completed' && purchase.productId.pdfUrl && (
+                              <button
+                                onClick={() => handleDownloadPDF(purchase.productId._id, purchase.productId.title)}
+                                className="btn btn-outline btn-sm"
+                              >
+                                <Download className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <ShoppingCart className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">No purchases yet</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">Start by browsing and purchasing product research to build your library.</p>
+                    <Link href="/products" className="btn btn-primary">
+                      <Package className="h-4 w-4 mr-2" />
+                      Browse Products
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Research Library */}
             <div className="card">
               <div className="card-header">
                 <h3 className="card-title">Research Library</h3>
-                <p className="text-sm text-gray-600">Access your completed research purchases</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Access your completed research purchases</p>
               </div>
               <div className="card-content">
                 {purchases.filter(p => p.status === 'completed').length > 0 ? (
@@ -439,7 +413,7 @@ export default function BuyerDashboard() {
                 )}
               </div>
             </div>
-          )}
+          </div>
         </DashboardContent>
       </Dashboard>
     </ProtectedRoute>

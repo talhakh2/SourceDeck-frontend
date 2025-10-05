@@ -101,10 +101,10 @@ export function StatsCard({
             )}
             {change && (
               <div className="flex items-center gap-1">
-                <div className={cn('p-1 rounded-full', config.bgColor)}>
-                  <ChangeIcon className={cn('h-3 w-3', config.color)} />
+                <div className={cn('p-1 rounded-full', config?.bgColor)}>
+                  {ChangeIcon && <ChangeIcon className={cn('h-3 w-3', config?.color)} />}
                 </div>
-                <span className={cn('text-sm font-medium', config.text)}>
+                <span className={cn('text-sm font-medium', config?.text)}>
                   {change.type === 'increase' ? '+' : change.type === 'decrease' ? '-' : ''}
                   {Math.abs(change.value)}%
                 </span>
@@ -193,7 +193,7 @@ export function QuickStatsCard({
     <StatsCard
       title={title}
       value={value}
-      change={changeType ? { value: Math.abs(change), type: changeType, period } : undefined}
+      change={changeType && change !== undefined ? { value: Math.abs(change), type: changeType, period } : undefined}
       icon={icon}
       className={className}
     />

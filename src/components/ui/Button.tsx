@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, ButtonHTMLAttributes } from 'react';
+import React, { forwardRef, ButtonHTMLAttributes } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +31,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
 }
 
 /**
@@ -48,6 +50,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       fullWidth = false,
       disabled,
       children,
+      ariaLabel,
+      ariaDescribedBy,
       ...props
     },
     ref
@@ -98,10 +102,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={baseClasses}
         ref={ref}
         disabled={disabled || loading}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        aria-busy={loading}
         {...props}
       >
         {loading && (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="sr-only">Loading...</span>
+          </>
         )}
         {!loading && leftIcon && (
           <span className="flex-shrink-0">{leftIcon}</span>
@@ -118,3 +128,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
+
+// Memoized version for performance
+export const MemoizedButton = React.memo(Button);

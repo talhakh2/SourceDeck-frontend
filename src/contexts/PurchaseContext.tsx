@@ -22,12 +22,12 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   const lastUserIdRef = useRef<string | null>(null);
 
   const checkPurchaseStatus = useCallback(async (productId: string): Promise<boolean> => {
-    if (!user || user.role !== 'Buyer') return false;
+    if (!user || user.role !== 'buyer') return false;
     
     try {
       const response = await apiClient.verifyAccess(productId);
       if (response.success && response.data?.hasAccess) {
-        setPurchasedProducts(prev => new Set([...prev, productId]));
+        setPurchasedProducts(prev => new Set(Array.from(prev).concat(productId)));
         return true;
       }
       return false;
@@ -38,12 +38,12 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const refreshPurchases = useCallback(async () => {
-    if (!user || user.role !== 'Buyer') return;
+    if (!user || user.role !== 'buyer') return;
     
     try {
       const response = await apiClient.getMyPurchases();
-      if (response.success && response.data?.data) {
-        const productIds = response.data.data.map((purchase: any) => purchase.productId._id);
+      if (response.success && response.data?.purchases) {
+        const productIds = response.data.purchases.map((purchase: any) => purchase.productId._id);
         setPurchasedProducts(new Set(productIds));
       }
     } catch (error) {

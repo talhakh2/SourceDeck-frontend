@@ -101,7 +101,7 @@ export function useFormValidation<T extends Record<string, any>>(
       }
 
       if (!isValid) {
-        return errorMessage;
+        return errorMessage || 'Invalid value';
       }
     }
 

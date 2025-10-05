@@ -21,7 +21,7 @@ export default function CheckoutPage() {
       return;
     }
     
-    if (user.role !== 'Buyer') {
+    if (user.role !== 'buyer') {
       toast.error('Only buyers can make purchases');
       router.push('/products');
       return;
@@ -43,7 +43,7 @@ export default function CheckoutPage() {
       // Clear cart and show success
       clearCart();
       toast.success('Purchase completed successfully!');
-      router.push('/dashboard/buyer?purchase=success');
+      router.push('/dashboard/provider?purchase=success');
     } catch (error) {
       toast.error('Payment failed. Please try again.');
     } finally {
