@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CreditCard, Shield, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useHybridAuth } from '@/contexts/HybridAuthContext';
-import { formatCurrency } from '@/lib/api';
+import { formatCurrency, apiClient } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function CheckoutPage() {
@@ -36,16 +36,48 @@ export default function CheckoutPage() {
   const handleCheckout = async () => {
     setIsProcessing(true);
     
+    console.log('Starting checkout process...');
+    console.log('User:', user);
+    console.log('Items:', items);
+    console.log('Auth token:', localStorage.getItem('authToken'));
+    
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create purchases for each item in cart
+      const purchasePromises = items.map(async (item) => {
+        const purchaseData = {
+          productId: item.product._id,
+          amount: item.product.price,
+          currency: 'USD',
+          paymentProvider: 'demo', // Demo mode
+          paymentProviderTransactionId: `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+
+        console.log('Creating purchase with data:', purchaseData);
+
+        const response = await apiClient.request('/purchases', {
+          method: 'POST',
+          body: JSON.stringify(purchaseData)
+        });
+
+        console.log('Purchase response:', response);
+
+        if (!response.success) {
+          throw new Error(response.message || 'Failed to create purchase');
+        }
+
+        return response.data;
+      });
+
+      // Wait for all purchases to complete
+      await Promise.all(purchasePromises);
       
       // Clear cart and show success
       clearCart();
       toast.success('Purchase completed successfully!');
-      router.push('/dashboard/provider?purchase=success');
-    } catch (error) {
-      toast.error('Payment failed. Please try again.');
+      router.push('/my-purchases?purchase=success');
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast.error(error.message || 'Payment failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -190,6 +222,17 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Demo Mode Notice */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                  <Shield className="h-5 w-5" />
+                  <span className="font-medium">Demo Mode</span>
+                </div>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  All payments are automatically processed as successful for demonstration purposes.
+                </p>
               </div>
 
               {/* Purchase Button */}

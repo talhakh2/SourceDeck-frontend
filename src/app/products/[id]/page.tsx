@@ -122,13 +122,19 @@ export default function ProductDetailPage() {
         return;
       }
 
-      // TODO: Implement actual purchase flow with Stripe
-      const response = await apiClient.createPurchase({
+      // DEMO MODE: Auto-complete purchase
+      const purchaseData = {
         productId: params.id as string,
         amount: product?.price || 0,
-        paymentProvider: 'stripe',
-        paymentProviderTransactionId: 'temp_' + Date.now()
-      });
+        paymentProvider: 'demo',
+        paymentProviderTransactionId: `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+
+      console.log('Creating direct purchase with data:', purchaseData);
+
+      const response = await apiClient.createPurchase(purchaseData);
+
+      console.log('Direct purchase response:', response);
 
       if (response.success) {
         setHasAccess(true);
@@ -711,6 +717,18 @@ export default function ProductDetailPage() {
                         Purchase to reveal product name, ASIN, supplier link, and detailed insights
                       </p>
                     </div>
+                    
+                    {/* Demo Mode Notice */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                      <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                        <Shield className="h-4 w-4" />
+                        <span className="text-sm font-medium">Demo Mode</span>
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        Payment will be automatically processed as successful.
+                      </p>
+                    </div>
+                    
                     <button
                       onClick={handlePurchase}
                       disabled={isPurchasing}

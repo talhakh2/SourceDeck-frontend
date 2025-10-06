@@ -204,6 +204,11 @@ export function HybridAuthProvider({ children }: { children: ReactNode }) {
       if (user.role === 'seller' && currentPath === '/dashboard/seller') {
         router.push('/analytics');
       }
+      
+      // Redirect buyers to browse products after login
+      if (user.role === 'buyer' && currentPath === '/dashboard/provider') {
+        router.push('/products/browse');
+      }
     }
   }, [user, isLoading, router]);
 

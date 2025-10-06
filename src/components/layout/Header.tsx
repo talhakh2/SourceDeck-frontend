@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Search, User, ShoppingCart, Bell, LogOut, Settings, Package, TrendingUp, Plus, Home, BarChart3 } from 'lucide-react';
 import { useHybridAuth } from '@/contexts/HybridAuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -20,6 +20,7 @@ export function Header() {
   const { totalItems, openCart } = useCart();
   const { unreadCount } = useNotifications();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -47,8 +48,8 @@ export function Header() {
         ];
       } else {
         return [
-          { name: 'Dashboard', href: '/dashboard/provider', icon: TrendingUp },
-          { name: 'My Purchases', href: '/dashboard/provider?tab=purchases', icon: ShoppingCart },
+          { name: 'Browse', href: '/products/browse', icon: Package },
+          { name: 'My Purchases', href: '/my-purchases', icon: ShoppingCart },
         ];
       }
     }
@@ -72,8 +73,8 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Handle search logic here
-      console.log('Searching for:', searchQuery);
+      // Redirect to browse page with search query
+      router.push(`/products/browse?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -217,17 +218,6 @@ export function Header() {
                 </button>
               )}
 
-              {/* Quick action button for buyers only */}
-              {user && user.role === 'buyer' && (
-                <Link
-                  href="/products"
-                  className="hidden sm:flex items-center space-x-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl hover:scale-105 transform border border-green-500/20"
-                  title="Browse Products"
-                >
-                  <Package className="w-4 h-4" />
-                  <span>Browse</span>
-                </Link>
-              )}
 
               {/* User menu */}
               <div className="relative" data-user-menu>

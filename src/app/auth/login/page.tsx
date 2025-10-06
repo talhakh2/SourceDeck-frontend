@@ -25,8 +25,8 @@ export default function LoginPage() {
       // Add a small delay to ensure the user state is fully set
       const redirectTimer = setTimeout(() => {
         if (user.role === 'buyer') {
-          console.log('Redirecting buyer to provider dashboard');
-          router.push('/dashboard/provider');
+          console.log('Redirecting buyer to browse products');
+          router.push('/products/browse');
         } else if (user.role === 'seller') {
           console.log('Redirecting seller to seller dashboard');
           router.push('/dashboard/seller');

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingCart, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useHybridAuth } from '@/contexts/HybridAuthContext';
@@ -11,6 +12,7 @@ import toast from 'react-hot-toast';
 export default function CartPage() {
   const { items, totalItems, totalPrice, removeItem, clearCart } = useCart();
   const { user } = useHybridAuth();
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRemoveItem = (productId: string) => {
@@ -18,19 +20,26 @@ export default function CartPage() {
   };
 
   const handleCheckout = () => {
+    console.log('Checkout button clicked');
+    console.log('User:', user);
+    console.log('Items:', items);
+    
     if (!user) {
+      console.log('No user, redirecting to login');
       // Redirect to login if not authenticated
-      window.location.href = '/auth/login?redirect=/checkout';
+      router.push('/auth/login?redirect=/checkout');
       return;
     }
     
     if (user.role !== 'buyer') {
+      console.log('User is not a buyer, showing error');
       toast.error('Only buyers can make purchases. Please switch to buyer account.');
       return;
     }
     
+    console.log('Redirecting to checkout page');
     // Redirect to checkout
-    window.location.href = '/checkout';
+    router.push('/checkout');
   };
 
   if (items.length === 0) {

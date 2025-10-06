@@ -22,7 +22,10 @@ import {
   Share2,
   Clock,
   MapPin,
-  Building
+  Building,
+  BarChart3,
+  Target,
+  Zap
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useHybridAuth } from '@/contexts/HybridAuthContext';
@@ -58,26 +61,51 @@ function ProductsBrowseContent() {
     sortOrder: 'desc'
   });
 
+  const [appliedFilters, setAppliedFilters] = useState<ProductFilters>(filters);
+
   const { addItem } = useCart();
   const { user } = useHybridAuth();
 
   useEffect(() => {
     fetchProducts();
-  }, [filters]);
+  }, [appliedFilters]);
+
+  // Apply URL search parameters when component mounts or URL changes
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    const urlCategory = searchParams.get('category') || 'all';
+    
+    if (urlSearch !== filters.search || urlCategory !== filters.category) {
+      const newFilters = {
+        ...filters,
+        search: urlSearch,
+        category: urlCategory
+      };
+      setFilters(newFilters);
+      setAppliedFilters(newFilters);
+    }
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Build query parameters
       const queryParams = new URLSearchParams();
-      if (filters.search) queryParams.append('search', filters.search);
-      if (filters.category !== 'all') queryParams.append('category', filters.category);
-      if (filters.minPrice > 0) queryParams.append('minPrice', filters.minPrice.toString());
-      if (filters.maxPrice < 1000) queryParams.append('maxPrice', filters.maxPrice.toString());
-      queryParams.append('sortBy', filters.sortBy);
-      queryParams.append('sortOrder', filters.sortOrder);
+      if (appliedFilters.search && appliedFilters.search.trim().length >= 2) {
+        queryParams.append('search', appliedFilters.search.trim());
+      }
+      if (appliedFilters.category !== 'all') {
+        queryParams.append('category', appliedFilters.category);
+      }
+      if (appliedFilters.minPrice > 0) {
+        queryParams.append('minPrice', appliedFilters.minPrice.toString());
+      }
+      if (appliedFilters.maxPrice < 1000) {
+        queryParams.append('maxPrice', appliedFilters.maxPrice.toString());
+      }
+      queryParams.append('sortBy', appliedFilters.sortBy);
+      queryParams.append('sortOrder', appliedFilters.sortOrder);
       
       const endpoint = `/products${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       
@@ -114,34 +142,46 @@ function ProductsBrowseContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchProducts();
+    setAppliedFilters(filters);
   };
 
   const handleFilterChange = (newFilters: Partial<ProductFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
+  const applyFilters = () => {
+    setAppliedFilters(filters);
+  };
+
   const clearFilters = () => {
-    setFilters({
+    const clearedFilters: ProductFilters = {
       search: '',
       category: 'all',
       minPrice: 0,
       maxPrice: 1000,
       sortBy: 'createdAt',
       sortOrder: 'desc'
-    });
+    };
+    setFilters(clearedFilters);
+    setAppliedFilters(clearedFilters);
   };
 
   const categories = [
     'all',
     'Electronics',
-    'Fashion',
-    'Home & Garden',
+    'Home & Kitchen',
+    'Health & Personal Care',
     'Sports & Outdoors',
-    'Beauty & Health',
+    'Beauty & Personal Care',
     'Toys & Games',
-    'Books & Media',
     'Automotive',
+    'Pet Supplies',
+    'Books',
+    'Clothing & Accessories',
+    'Garden & Outdoor',
+    'Office Products',
+    'Baby Products',
+    'Tools & Home Improvement',
     'Other'
   ];
 
@@ -172,64 +212,76 @@ function ProductsBrowseContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container-responsive py-8">
-        {/* Compact Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Link
-              href={user ? (user.role === 'buyer' ? '/dashboard/provider' : '/dashboard/seller') : '/'}
-              className="btn btn-ghost btn-sm flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Browse Products</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-100 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              <Grid className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-100 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              <List className="h-5 w-5" />
-            </button>
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                href={user ? (user.role === 'buyer' ? '/my-purchases' : '/dashboard/seller') : '/'}
+                className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Back</span>
+              </Link>
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Product Research</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <Grid className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <List className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sticky top-8">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sticky top-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+                </div>
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-primary-600 hover:text-primary-700"
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
                 >
-                  Clear All
+                  Clear
                 </button>
               </div>
 
-              <form onSubmit={handleSearch} className="space-y-6">
+              {JSON.stringify(filters) !== JSON.stringify(appliedFilters) && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">Filters changed</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSearch} className="space-y-5">
                 {/* Search */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Search
+                    Search Products
                   </label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="text"
-                      placeholder="Search products..."
+                      placeholder="Search..."
                       value={filters.search}
                       onChange={(e) => handleFilterChange({ search: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all"
                     />
                   </div>
                 </div>
@@ -242,7 +294,7 @@ function ProductsBrowseContent() {
                   <select
                     value={filters.category}
                     onChange={(e) => handleFilterChange({ category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all"
                   >
                     {categories.map(category => (
                       <option key={category} value={category}>
@@ -263,14 +315,14 @@ function ProductsBrowseContent() {
                       placeholder="Min"
                       value={filters.minPrice || ''}
                       onChange={(e) => handleFilterChange({ minPrice: Number(e.target.value) || 0 })}
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                      className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all"
                     />
                     <input
                       type="number"
                       placeholder="Max"
                       value={filters.maxPrice || ''}
                       onChange={(e) => handleFilterChange({ maxPrice: Number(e.target.value) || 1000 })}
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                      className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all"
                     />
                   </div>
                 </div>
@@ -283,28 +335,24 @@ function ProductsBrowseContent() {
                   <select
                     value={filters.sortBy}
                     onChange={(e) => handleFilterChange({ sortBy: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all mb-2"
                   >
                     <option value="createdAt">Date Added</option>
                     <option value="price">Price</option>
-                    <option value="title">Title</option>
                     <option value="views">Views</option>
                     <option value="purchaseCount">Sales</option>
                   </select>
-                </div>
-
-                <div>
                   <select
                     value={filters.sortOrder}
                     onChange={(e) => handleFilterChange({ sortOrder: e.target.value as 'asc' | 'desc' })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/20 transition-all"
                   >
-                    <option value="desc">Descending</option>
-                    <option value="asc">Ascending</option>
+                    <option value="desc">High to Low</option>
+                    <option value="asc">Low to High</option>
                   </select>
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="button" onClick={applyFilters} className="w-full bg-gray-900 hover:bg-gray-800 text-white">
                   Apply Filters
                 </Button>
               </form>
@@ -314,9 +362,9 @@ function ProductsBrowseContent() {
           {/* Products Grid/List */}
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {products.length} Products Found
-              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{products.length}</span> products found
+              </p>
             </div>
 
             {products.length > 0 ? (
@@ -327,340 +375,333 @@ function ProductsBrowseContent() {
                 {products.map((product) => (
                   <div
                     key={product._id}
-                    className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:scale-105 transition-all duration-300 ${
+                    className={`group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 ${
                       viewMode === 'list' ? 'flex' : ''
                     }`}
                   >
                     {viewMode === 'grid' ? (
-                      // Grid View - GitHub Repository Style
-                      <>
+                      // Grid View
+                      <div className="p-6">
+                        {/* Header */}
+                        <div className="mb-4">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 text-base leading-tight">
+                              {product.title}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg">
+                              {product.previewData?.productCategory || product.category}
+                            </span>
+                            {product.previewData?.subCategory && (
+                              <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 text-xs rounded-lg">
+                                {product.previewData.subCategory}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                        <div className="p-6">
-                          {/* Product Header */}
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 text-lg">
-                                {product.title}
-                              </h3>
-                              <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
-                                  {product.category}
-                                </span>
-                                {product.rating && (
-                                  <div className="flex items-center gap-1">
-                                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                      {product.rating.average}
-                                    </span>
-                                  </div>
-                                )}
+                        {/* Key Metrics */}
+                        <div className="space-y-3 mb-5">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                              <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Monthly Sales</span>
                               </div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {product.previewData?.estimatedMonthlySales || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                              <div className="flex items-center gap-2 mb-1">
+                                <DollarSign className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Revenue</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {product.previewData?.estimatedMonthlyRevenue || 'N/A'}
+                              </p>
                             </div>
                           </div>
 
-                          {/* Research Data */}
-                          <div className="space-y-4 mb-6">
-                            {/* Category and Subcategory */}
-                            <div className="flex items-center gap-2">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                                {product.previewData?.productCategory || product.category}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                              <div className="flex items-center gap-2 mb-1">
+                                <BarChart3 className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Avg Price</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {product.previewData?.averageSellingPrice ? formatCurrency(product.previewData.averageSellingPrice) : 'N/A'}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Target className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Competition</span>
+                              </div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {product.previewData?.competitionLevel || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Secondary Metrics */}
+                        <div className="grid grid-cols-2 gap-2 mb-5">
+                          <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Search Volume</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                              {product.previewData?.searchVolumeBracket || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Margin</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                              {product.previewData?.estimatedMargin ? `${product.previewData.estimatedMargin}%` : 'N/A'}
+                            </p>
+                          </div>
+                          <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">FBA Fees</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                              {product.previewData?.fbaFeesCategory || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Seasonality</p>
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                              {product.previewData?.seasonality || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Confidence Score */}
+                        {product.previewData?.confidenceScore && (
+                          <div className="mb-5 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/30 dark:to-gray-700/50 rounded-xl">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Zap className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Confidence Score</span>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {product.previewData.confidenceScore}/10
                               </span>
-                              {product.previewData?.subCategory && (
-                                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
-                                  {product.previewData.subCategory}
+                            </div>
+                            <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-gray-400 to-gray-900 rounded-full transition-all duration-500"
+                                style={{ width: `${(product.previewData.confidenceScore / 10) * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Price */}
+                        <div className="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
+                          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                            {formatCurrency(product.price)}
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            one-time purchase
+                          </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 mb-4">
+                          <Link
+                            href={`/products/${product._id}`}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-xl transition-colors"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View Details
+                          </Link>
+                          {user && user.role === 'buyer' ? (
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              className="inline-flex items-center justify-center p-2.5 border-2 border-gray-900 hover:bg-gray-900 text-gray-900 hover:text-white rounded-xl transition-colors"
+                              title="Add to Cart"
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                            </button>
+                          ) : !user ? (
+                            <Link
+                              href="/auth/login"
+                              className="inline-flex items-center justify-center p-2.5 border-2 border-gray-900 hover:bg-gray-900 text-gray-900 hover:text-white rounded-xl transition-colors"
+                              title="Login to Add to Cart"
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                            </Link>
+                          ) : null}
+                        </div>
+
+                        {/* Provider */}
+                        <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {product.sellerId?.name || 'Anonymous'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {formatDate(product.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // List View
+                      <div className="p-5 flex-1">
+                        <div className="flex items-start gap-4">
+                          {/* Left Content */}
+                          <div className="flex-1 min-w-0">
+                            {/* Header */}
+                            <div className="mb-4">
+                              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-2 line-clamp-1">
+                                {product.title}
+                              </h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg">
+                                  {product.previewData?.productCategory || product.category}
                                 </span>
-                              )}
+                                {product.previewData?.subCategory && (
+                                  <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 text-xs rounded-lg">
+                                    {product.previewData.subCategory}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Key Metrics Grid */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                                <div className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Monthly Sales</div>
-                                <div className="text-sm font-bold text-green-800 dark:text-green-300">
+                            {/* Metrics Grid */}
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Sales</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
                                   {product.previewData?.estimatedMonthlySales || 'N/A'}
-                                </div>
+                                </p>
                               </div>
-                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Monthly Revenue</div>
-                                <div className="text-sm font-bold text-blue-800 dark:text-blue-300">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Revenue</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
                                   {product.previewData?.estimatedMonthlyRevenue || 'N/A'}
-                                </div>
+                                </p>
                               </div>
-                              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                                <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Avg Price</div>
-                                <div className="text-sm font-bold text-purple-800 dark:text-purple-300">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Price</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
                                   {product.previewData?.averageSellingPrice ? formatCurrency(product.previewData.averageSellingPrice) : 'N/A'}
-                                </div>
+                                </p>
                               </div>
-                              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                                <div className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">Competition</div>
-                                <div className="text-sm font-bold text-orange-800 dark:text-orange-300">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Competition</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
                                   {product.previewData?.competitionLevel || 'N/A'}
-                                </div>
+                                </p>
+                              </div>
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Margin</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                  {product.previewData?.estimatedMargin ? `${product.previewData.estimatedMargin}%` : 'N/A'}
+                                </p>
+                              </div>
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">Confidence</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                  {product.previewData?.confidenceScore ? `${product.previewData.confidenceScore}/10` : 'N/A'}
+                                </p>
                               </div>
                             </div>
 
                             {/* Additional Metrics */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Search Volume</div>
-                                <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                            <div className="grid grid-cols-4 gap-2">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Search Vol.</p>
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.previewData?.searchVolumeBracket || 'N/A'}
-                                </div>
+                                </p>
                               </div>
-                              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Margin</div>
-                                <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                                  {product.previewData?.estimatedMargin ? `${product.previewData.estimatedMargin}%` : 'N/A'}
-                                </div>
-                              </div>
-                              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">FBA Fees</div>
-                                <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">FBA Fees</p>
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.previewData?.fbaFeesCategory || 'N/A'}
-                                </div>
+                                </p>
                               </div>
-                              <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Seasonality</div>
-                                <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Seasonality</p>
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
                                   {product.previewData?.seasonality || 'N/A'}
-                                </div>
+                                </p>
+                              </div>
+                              <div className="p-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Seller</p>
+                                <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  {product.sellerId?.name || 'Anonymous'}
+                                </p>
                               </div>
                             </div>
-
-                            {/* Confidence Score */}
-                            {product.previewData?.confidenceScore && (
-                              <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Confidence Score</div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-16 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full"
-                                        style={{ width: `${(product.previewData.confidenceScore / 10) * 100}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                                      {product.previewData.confidenceScore}/10
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                           </div>
 
-                          {/* Price and Actions */}
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <div className="text-2xl font-bold text-primary-600">
+                          {/* Right Content */}
+                          <div className="flex flex-col items-end gap-3">
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                 {formatCurrency(product.price)}
                               </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                one-time purchase
-                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                one-time
+                              </p>
                             </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/products/${product._id}`}
-                              className="flex-1 btn btn-primary btn-sm"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Link>
-                            {user && user.role === 'buyer' ? (
-                              <button
-                                onClick={() => handleAddToCart(product)}
-                                className="btn btn-outline btn-sm"
-                                title="Add to Cart"
-                              >
-                                <ShoppingCart className="h-4 w-4" />
-                              </button>
-                            ) : !user ? (
+                            <div className="flex items-center gap-2">
                               <Link
-                                href="/auth/login"
-                                className="btn btn-outline btn-sm"
-                                title="Login to Add to Cart"
+                                href={`/products/${product._id}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors"
                               >
-                                <ShoppingCart className="h-4 w-4" />
+                                <Eye className="h-4 w-4" />
+                                View
                               </Link>
-                            ) : null}
-                          </div>
-
-                          {/* Provider Info */}
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                                <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  {product.sellerId?.name || 'Anonymous'}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {product.sellerId?.profile?.company || 'Independent Seller'}
-                                </div>
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {formatDate(product.createdAt)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      // List View - Compact with All Research Data
-                      <>
-                        <div className="p-4 flex-1">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              {/* Product Header */}
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
-                                  <Package className="h-4 w-4 text-primary-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">
-                                    {product.title}
-                                  </h3>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
-                                      {product.previewData?.productCategory || product.category}
-                                    </span>
-                                    {product.previewData?.subCategory && (
-                                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
-                                        {product.previewData.subCategory}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                </div>
-                              </div>
-                              
-                              {/* Compact Research Data - All Fields */}
-                              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
-                                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded text-center">
-                                  <div className="text-xs text-green-600 dark:text-green-400 font-medium">Sales</div>
-                                  <div className="text-xs font-bold text-green-800 dark:text-green-300">
-                                    {product.previewData?.estimatedMonthlySales || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-center">
-                                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">Revenue</div>
-                                  <div className="text-xs font-bold text-blue-800 dark:text-blue-300">
-                                    {product.previewData?.estimatedMonthlyRevenue || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded text-center">
-                                  <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">Price</div>
-                                  <div className="text-xs font-bold text-purple-800 dark:text-purple-300">
-                                    {product.previewData?.averageSellingPrice ? formatCurrency(product.previewData.averageSellingPrice) : 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded text-center">
-                                  <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">Competition</div>
-                                  <div className="text-xs font-bold text-orange-800 dark:text-orange-300">
-                                    {product.previewData?.competitionLevel || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded text-center">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Margin</div>
-                                  <div className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                                    {product.previewData?.estimatedMargin ? `${product.previewData.estimatedMargin}%` : 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded text-center">
-                                  <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Confidence</div>
-                                  <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
-                                    {product.previewData?.confidenceScore ? `${product.previewData.confidenceScore}/10` : 'N/A'}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Additional Metrics Row */}
-                              <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-3">
-                                <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-center">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400">Search Volume</div>
-                                  <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                                    {product.previewData?.searchVolumeBracket || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-center">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400">FBA Fees</div>
-                                  <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                                    {product.previewData?.fbaFeesCategory || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-center">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400">Seasonality</div>
-                                  <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                                    {product.previewData?.seasonality || 'N/A'}
-                                  </div>
-                                </div>
-                                <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-center">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400">Seller</div>
-                                  <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                                    {product.sellerId?.name || 'Anonymous'}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-        
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  href={`/products/${product._id}`}
-                                  className="btn btn-primary btn-sm"
+                              {user && user.role === 'buyer' ? (
+                                <button
+                                  onClick={() => handleAddToCart(product)}
+                                  className="inline-flex items-center justify-center p-2 border-2 border-gray-900 hover:bg-gray-900 text-gray-900 hover:text-white rounded-lg transition-colors"
+                                  title="Add to Cart"
                                 >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                  <ShoppingCart className="h-4 w-4" />
+                                </button>
+                              ) : !user ? (
+                                <Link
+                                  href="/auth/login"
+                                  className="inline-flex items-center justify-center p-2 border-2 border-gray-900 hover:bg-gray-900 text-gray-900 hover:text-white rounded-lg transition-colors"
+                                  title="Login to Add to Cart"
+                                >
+                                  <ShoppingCart className="h-4 w-4" />
                                 </Link>
-                                {user && user.role === 'buyer' ? (
-                                  <button
-                                    onClick={() => handleAddToCart(product)}
-                                    className="btn btn-outline btn-sm"
-                                    title="Add to Cart"
-                                  >
-                                    <ShoppingCart className="h-4 w-4" />
-                                  </button>
-                                ) : !user ? (
-                                  <Link
-                                    href="/auth/login"
-                                    className="btn btn-outline btn-sm"
-                                    title="Login to Add to Cart"
-                                  >
-                                    <ShoppingCart className="h-4 w-4" />
-                                  </Link>
-                                ) : null}
-                              </div>
+                              ) : null}
                             </div>
                           </div>
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No products found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Try adjusting your search or filter criteria.
-                </p>
-                <button
-                  onClick={clearFilters}
-                  className="btn btn-primary"
-                >
-                  Clear Filters
-                </button>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Package className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    No products found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Try adjusting your search or filter criteria to find what you're looking for.
+                  </p>
+                  <button
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
               </div>
             )}
           </div>

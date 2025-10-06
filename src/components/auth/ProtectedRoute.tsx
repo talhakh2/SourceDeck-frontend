@@ -32,9 +32,9 @@ export function ProtectedRoute({
       }
 
       if (requiredRole && user.role !== requiredRole) {
-        // Redirect to appropriate dashboard based on user role
+        // Redirect to appropriate page based on user role
         if (user.role === 'buyer') {
-          router.replace('/dashboard/provider');
+          router.replace('/products/browse');
         } else {
           router.replace('/dashboard/seller');
         }
