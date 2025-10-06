@@ -66,10 +66,10 @@ export default function EditProductPage() {
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
-    title: '',
-    category: 'Electronics',
-    price: '',
-    status: 'draft',
+    title: 'High-Margin Kitchen Gadget Research - 300% Profit Potential',
+    category: 'Home & Kitchen',
+    price: '99',
+    status: 'published',
     previewData: {
       productCategory: '',
       subCategory: '',
