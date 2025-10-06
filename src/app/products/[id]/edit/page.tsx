@@ -71,60 +71,60 @@ export default function EditProductPage() {
     price: '99',
     status: 'published',
     previewData: {
-      productCategory: '',
-      subCategory: '',
+      productCategory: 'Kitchen',
+      subCategory: 'Kitchen Tools',
       estimatedMonthlySales: '0-100' as const,
       estimatedMonthlyRevenue: '$0-$1K' as const,
-      averageSellingPrice: '',
+      averageSellingPrice: '29.99',
       competitionLevel: 'Low' as const,
       searchVolumeBracket: 'Low (0-1K)' as const,
-      estimatedMargin: '',
+      estimatedMargin: '45.5',
       fbaFeesCategory: 'Low' as const,
       seasonality: 'Year-round' as const,
-      confidenceScore: 5,
-      productName: '',
-      keywords: [] as string[],
-      asin: '',
-      supplierInformation: ''
+      confidenceScore: 8,
+      productName: 'Premium Multi-Purpose Kitchen Measuring Spoon Set',
+      keywords: ['measuring spoons', 'kitchen tools', 'cooking utensils', 'baking supplies', 'stainless steel spoons'],
+      asin: 'B08XYZ1234',
+      supplierInformation: 'Verified supplier in Guangdong, China with 5+ years experience in kitchenware.'
     },
     fullData: {
       deeperKpis: {
         estimatedMonthlySales: '0-100' as const,
-        demandTrendChart: '',
-        competitorReviewDistribution: '',
+        demandTrendChart: 'Steady upward trend over 12 months. Peak demand during holiday season (Nov-Dec) with 40% increase. Summer months show consistent 15% growth.',
+        competitorReviewDistribution: 'Most competitors have 4-4.5 star ratings with 100-500 reviews. Opportunity for higher quality product with better customer service.',
         averageBsrMovement: 'Stable' as const,
         ppcLandscape: {
-          cpc: '',
-          budget: ''
+          cpc: '1.25',
+          budget: '500'
         },
-        targetPricePoint: '',
-        landedCost: '',
-        fbaFees: '',
-        netMarginBreakdown: ''
+        targetPricePoint: '29.99',
+        landedCost: '12.50',
+        fbaFees: '4.50',
+        netMarginBreakdown: 'Target price: $29.99, Landed cost: $12.50, FBA fees: $4.50, Net margin: $13.00 (43.3%)'
       },
       profitabilityBreakdown: {
-        customerPainPoints: '',
-        bundlingIdeas: '',
-        discountOffersTemplates: '',
-        materialUpgrades: ''
+        customerPainPoints: 'Current measuring spoons rust easily, measurements fade over time, and sets are incomplete. Customers want durable, accurate, and complete sets.',
+        bundlingIdeas: 'Bundle with measuring cups, mixing bowls, or baking mats. Create themed sets for specific cuisines (Asian, Mediterranean, etc.).',
+        discountOffersTemplates: 'Buy 2 get 1 free, 20% off for first-time buyers, Free shipping on orders over $25, Holiday bundle discounts.',
+        materialUpgrades: 'Stainless steel construction, laser-etched measurements, ergonomic handles, magnetic storage, dishwasher safe coating.'
       },
       differentiationOpportunities: {
         supplierRegion: 'China' as const,
-        moq: '',
+        moq: '500',
         deliveryTime: '1-2 weeks' as const,
         launchComplexity: 'Low' as const
       },
       productInformation: {
-        productName: '',
-        keywords: [] as string[],
-        asin: '',
-        supplierLink: ''
+        productName: 'Premium Multi-Purpose Kitchen Measuring Spoon Set',
+        keywords: ['measuring spoons', 'kitchen tools', 'cooking utensils', 'baking supplies', 'stainless steel spoons'],
+        asin: 'B08XYZ1234',
+        supplierLink: 'https://supplier.example.com/measuring-spoons'
       },
-      sourcingStrategy: '',
-      launchPlan: '',
-      additionalNotes: ''
+      sourcingStrategy: 'Verified supplier in Guangdong, China with 5+ years experience in kitchenware. Quality control includes material testing, durability testing, and packaging inspection. Minimum order 500 units with 30-day lead time. Payment terms: 30% deposit, 70% before shipment. Quality guarantee includes 1-year warranty on manufacturing defects.',
+      launchPlan: 'Phase 1 (Month 1): Product listing optimization, keyword research, initial inventory (500 units). Phase 2 (Month 2): PPC campaign launch, influencer outreach, review generation. Phase 3 (Month 3): Scale advertising, expand to additional keywords, inventory restock (1000 units). Phase 4 (Month 4+): Brand building, competitor analysis, seasonal adjustments.',
+      additionalNotes: 'Seasonal opportunity: 40% sales increase during holiday season. Consider launching in September for Q4 preparation. Monitor competitor pricing weekly. Potential for private label expansion with measuring cups and mixing bowls.'
     },
-    tags: [] as string[],
+    tags: ['kitchen', 'cooking', 'baking', 'measuring', 'tools'],
     pdfUrl: ''
   });
   const [newTag, setNewTag] = useState('');
