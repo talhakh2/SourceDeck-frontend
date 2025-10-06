@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -54,7 +54,7 @@ interface Purchase {
 }
 
 
-export default function MyPurchasesPage() {
+function MyPurchasesContent() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -293,5 +293,22 @@ export default function MyPurchasesPage() {
         </div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function MyPurchasesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container-responsive py-16">
+          <div className="text-center">
+            <LoadingSpinner />
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading purchases...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <MyPurchasesContent />
+    </Suspense>
   );
 }
